@@ -1,0 +1,651 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		FA645DAC2E3055F30090956D /* Mail_Box_NotiferApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA645DAB2E3055F30090956D /* Mail_Box_NotiferApp.swift */; };
+		FA645DAE2E3055F30090956D /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA645DAD2E3055F30090956D /* ContentView.swift */; };
+		FA645DB02E3055F50090956D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = FA645DAF2E3055F50090956D /* Assets.xcassets */; };
+		FA645DB32E3055F50090956D /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = FA645DB22E3055F50090956D /* Preview Assets.xcassets */; };
+		FA645DBD2E3055F50090956D /* Mail_Box_NotiferTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA645DBC2E3055F50090956D /* Mail_Box_NotiferTests.swift */; };
+		FA645DC72E3055F60090956D /* Mail_Box_NotiferUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA645DC62E3055F60090956D /* Mail_Box_NotiferUITests.swift */; };
+		FA645DC92E3055F60090956D /* Mail_Box_NotiferUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA645DC82E3055F60090956D /* Mail_Box_NotiferUITestsLaunchTests.swift */; };
+		FA645DD72E3057E30090956D /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = FA645DD62E3057E30090956D /* FirebaseAuth */; };
+		FA645DD92E3057E30090956D /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = FA645DD82E3057E30090956D /* FirebaseFirestore */; };
+		FA645DDB2E3057E30090956D /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = FA645DDA2E3057E30090956D /* FirebaseMessaging */; };
+		FACC462C2E306DF7005A3704 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = FACC462B2E306DF7005A3704 /* GoogleService-Info.plist */; };
+		FACC462F2E3076A4005A3704 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = FACC462E2E3076A3005A3704 /* AppDelegate.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		FA645DB92E3055F50090956D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = FA645DA02E3055F30090956D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = FA645DA72E3055F30090956D;
+			remoteInfo = "Mail Box Notifer";
+		};
+		FA645DC32E3055F60090956D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = FA645DA02E3055F30090956D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = FA645DA72E3055F30090956D;
+			remoteInfo = "Mail Box Notifer";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		FA40CD192E306B1700A9E809 /* Mail Box Notifer.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Mail Box Notifer.entitlements"; sourceTree = "<group>"; };
+		FA645DA82E3055F30090956D /* Mail Box Notifer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Mail Box Notifer.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		FA645DAB2E3055F30090956D /* Mail_Box_NotiferApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Mail_Box_NotiferApp.swift; sourceTree = "<group>"; };
+		FA645DAD2E3055F30090956D /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		FA645DAF2E3055F50090956D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		FA645DB22E3055F50090956D /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		FA645DB82E3055F50090956D /* Mail Box NotiferTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Mail Box NotiferTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		FA645DBC2E3055F50090956D /* Mail_Box_NotiferTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Mail_Box_NotiferTests.swift; sourceTree = "<group>"; };
+		FA645DC22E3055F60090956D /* Mail Box NotiferUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Mail Box NotiferUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		FA645DC62E3055F60090956D /* Mail_Box_NotiferUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Mail_Box_NotiferUITests.swift; sourceTree = "<group>"; };
+		FA645DC82E3055F60090956D /* Mail_Box_NotiferUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Mail_Box_NotiferUITestsLaunchTests.swift; sourceTree = "<group>"; };
+		FACC462B2E306DF7005A3704 /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = "GoogleService-Info.plist"; path = "../GoogleService-Info.plist"; sourceTree = "<group>"; };
+		FACC462D2E3071AD005A3704 /* Mail-Box-Notifer-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "Mail-Box-Notifer-Info.plist"; sourceTree = SOURCE_ROOT; };
+		FACC462E2E3076A3005A3704 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		FA645DA52E3055F30090956D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FA645DDB2E3057E30090956D /* FirebaseMessaging in Frameworks */,
+				FA645DD72E3057E30090956D /* FirebaseAuth in Frameworks */,
+				FA645DD92E3057E30090956D /* FirebaseFirestore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FA645DB52E3055F50090956D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FA645DBF2E3055F60090956D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		FA645D9F2E3055F30090956D = {
+			isa = PBXGroup;
+			children = (
+				FACC462B2E306DF7005A3704 /* GoogleService-Info.plist */,
+				FA645DAA2E3055F30090956D /* Mail Box Notifer */,
+				FA645DBB2E3055F50090956D /* Mail Box NotiferTests */,
+				FA645DC52E3055F60090956D /* Mail Box NotiferUITests */,
+				FA645DA92E3055F30090956D /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		FA645DA92E3055F30090956D /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				FA645DA82E3055F30090956D /* Mail Box Notifer.app */,
+				FA645DB82E3055F50090956D /* Mail Box NotiferTests.xctest */,
+				FA645DC22E3055F60090956D /* Mail Box NotiferUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		FA645DAA2E3055F30090956D /* Mail Box Notifer */ = {
+			isa = PBXGroup;
+			children = (
+				FACC462D2E3071AD005A3704 /* Mail-Box-Notifer-Info.plist */,
+				FA40CD192E306B1700A9E809 /* Mail Box Notifer.entitlements */,
+				FA645DAB2E3055F30090956D /* Mail_Box_NotiferApp.swift */,
+				FA645DAD2E3055F30090956D /* ContentView.swift */,
+				FA645DAF2E3055F50090956D /* Assets.xcassets */,
+				FA645DB12E3055F50090956D /* Preview Content */,
+				FACC462E2E3076A3005A3704 /* AppDelegate.swift */,
+			);
+			path = "Mail Box Notifer";
+			sourceTree = "<group>";
+		};
+		FA645DB12E3055F50090956D /* Preview Content */ = {
+			isa = PBXGroup;
+			children = (
+				FA645DB22E3055F50090956D /* Preview Assets.xcassets */,
+			);
+			path = "Preview Content";
+			sourceTree = "<group>";
+		};
+		FA645DBB2E3055F50090956D /* Mail Box NotiferTests */ = {
+			isa = PBXGroup;
+			children = (
+				FA645DBC2E3055F50090956D /* Mail_Box_NotiferTests.swift */,
+			);
+			path = "Mail Box NotiferTests";
+			sourceTree = "<group>";
+		};
+		FA645DC52E3055F60090956D /* Mail Box NotiferUITests */ = {
+			isa = PBXGroup;
+			children = (
+				FA645DC62E3055F60090956D /* Mail_Box_NotiferUITests.swift */,
+				FA645DC82E3055F60090956D /* Mail_Box_NotiferUITestsLaunchTests.swift */,
+			);
+			path = "Mail Box NotiferUITests";
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		FA645DA72E3055F30090956D /* Mail Box Notifer */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FA645DCC2E3055F60090956D /* Build configuration list for PBXNativeTarget "Mail Box Notifer" */;
+			buildPhases = (
+				FA645DA42E3055F30090956D /* Sources */,
+				FA645DA52E3055F30090956D /* Frameworks */,
+				FA645DA62E3055F30090956D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "Mail Box Notifer";
+			packageProductDependencies = (
+				FA645DD62E3057E30090956D /* FirebaseAuth */,
+				FA645DD82E3057E30090956D /* FirebaseFirestore */,
+				FA645DDA2E3057E30090956D /* FirebaseMessaging */,
+			);
+			productName = "Mail Box Notifer";
+			productReference = FA645DA82E3055F30090956D /* Mail Box Notifer.app */;
+			productType = "com.apple.product-type.application";
+		};
+		FA645DB72E3055F50090956D /* Mail Box NotiferTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FA645DCF2E3055F60090956D /* Build configuration list for PBXNativeTarget "Mail Box NotiferTests" */;
+			buildPhases = (
+				FA645DB42E3055F50090956D /* Sources */,
+				FA645DB52E3055F50090956D /* Frameworks */,
+				FA645DB62E3055F50090956D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				FA645DBA2E3055F50090956D /* PBXTargetDependency */,
+			);
+			name = "Mail Box NotiferTests";
+			productName = "Mail Box NotiferTests";
+			productReference = FA645DB82E3055F50090956D /* Mail Box NotiferTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		FA645DC12E3055F60090956D /* Mail Box NotiferUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FA645DD22E3055F60090956D /* Build configuration list for PBXNativeTarget "Mail Box NotiferUITests" */;
+			buildPhases = (
+				FA645DBE2E3055F60090956D /* Sources */,
+				FA645DBF2E3055F60090956D /* Frameworks */,
+				FA645DC02E3055F60090956D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				FA645DC42E3055F60090956D /* PBXTargetDependency */,
+			);
+			name = "Mail Box NotiferUITests";
+			productName = "Mail Box NotiferUITests";
+			productReference = FA645DC22E3055F60090956D /* Mail Box NotiferUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		FA645DA02E3055F30090956D /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1410;
+				LastUpgradeCheck = 1410;
+				TargetAttributes = {
+					FA645DA72E3055F30090956D = {
+						CreatedOnToolsVersion = 14.1;
+					};
+					FA645DB72E3055F50090956D = {
+						CreatedOnToolsVersion = 14.1;
+						TestTargetID = FA645DA72E3055F30090956D;
+					};
+					FA645DC12E3055F60090956D = {
+						CreatedOnToolsVersion = 14.1;
+						TestTargetID = FA645DA72E3055F30090956D;
+					};
+				};
+			};
+			buildConfigurationList = FA645DA32E3055F30090956D /* Build configuration list for PBXProject "Mail Box Notifer" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = FA645D9F2E3055F30090956D;
+			packageReferences = (
+				FA645DD52E3057E30090956D /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
+			productRefGroup = FA645DA92E3055F30090956D /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				FA645DA72E3055F30090956D /* Mail Box Notifer */,
+				FA645DB72E3055F50090956D /* Mail Box NotiferTests */,
+				FA645DC12E3055F60090956D /* Mail Box NotiferUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		FA645DA62E3055F30090956D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FA645DB32E3055F50090956D /* Preview Assets.xcassets in Resources */,
+				FA645DB02E3055F50090956D /* Assets.xcassets in Resources */,
+				FACC462C2E306DF7005A3704 /* GoogleService-Info.plist in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FA645DB62E3055F50090956D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FA645DC02E3055F60090956D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		FA645DA42E3055F30090956D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FACC462F2E3076A4005A3704 /* AppDelegate.swift in Sources */,
+				FA645DAE2E3055F30090956D /* ContentView.swift in Sources */,
+				FA645DAC2E3055F30090956D /* Mail_Box_NotiferApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FA645DB42E3055F50090956D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FA645DBD2E3055F50090956D /* Mail_Box_NotiferTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FA645DBE2E3055F60090956D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FA645DC72E3055F60090956D /* Mail_Box_NotiferUITests.swift in Sources */,
+				FA645DC92E3055F60090956D /* Mail_Box_NotiferUITestsLaunchTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		FA645DBA2E3055F50090956D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = FA645DA72E3055F30090956D /* Mail Box Notifer */;
+			targetProxy = FA645DB92E3055F50090956D /* PBXContainerItemProxy */;
+		};
+		FA645DC42E3055F60090956D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = FA645DA72E3055F30090956D /* Mail Box Notifer */;
+			targetProxy = FA645DC32E3055F60090956D /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		FA645DCA2E3055F60090956D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		FA645DCB2E3055F60090956D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		FA645DCD2E3055F60090956D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "Mail Box Notifer/Mail Box Notifer.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"Mail Box Notifer/Preview Content\"";
+				DEVELOPMENT_TEAM = ZL6287AT9V;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Mail-Box-Notifer-Info.plist";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "Notify.Mail-Box-Notifer";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		FA645DCE2E3055F60090956D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "Mail Box Notifer/Mail Box Notifer.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"Mail Box Notifer/Preview Content\"";
+				DEVELOPMENT_TEAM = ZL6287AT9V;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Mail-Box-Notifer-Info.plist";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "Notify.Mail-Box-Notifer";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		FA645DD02E3055F60090956D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = ZL6287AT9V;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "Notify.Mail-Box-NotiferTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Mail Box Notifer.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Mail Box Notifer";
+			};
+			name = Debug;
+		};
+		FA645DD12E3055F60090956D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = ZL6287AT9V;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "Notify.Mail-Box-NotiferTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Mail Box Notifer.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Mail Box Notifer";
+			};
+			name = Release;
+		};
+		FA645DD32E3055F60090956D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = ZL6287AT9V;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "Notify.Mail-Box-NotiferUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = "Mail Box Notifer";
+			};
+			name = Debug;
+		};
+		FA645DD42E3055F60090956D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = ZL6287AT9V;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "Notify.Mail-Box-NotiferUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = "Mail Box Notifer";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		FA645DA32E3055F30090956D /* Build configuration list for PBXProject "Mail Box Notifer" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FA645DCA2E3055F60090956D /* Debug */,
+				FA645DCB2E3055F60090956D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		FA645DCC2E3055F60090956D /* Build configuration list for PBXNativeTarget "Mail Box Notifer" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FA645DCD2E3055F60090956D /* Debug */,
+				FA645DCE2E3055F60090956D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		FA645DCF2E3055F60090956D /* Build configuration list for PBXNativeTarget "Mail Box NotiferTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FA645DD02E3055F60090956D /* Debug */,
+				FA645DD12E3055F60090956D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		FA645DD22E3055F60090956D /* Build configuration list for PBXNativeTarget "Mail Box NotiferUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FA645DD32E3055F60090956D /* Debug */,
+				FA645DD42E3055F60090956D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		FA645DD52E3057E30090956D /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 10.16.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		FA645DD62E3057E30090956D /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FA645DD52E3057E30090956D /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		FA645DD82E3057E30090956D /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FA645DD52E3057E30090956D /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+		FA645DDA2E3057E30090956D /* FirebaseMessaging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FA645DD52E3057E30090956D /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseMessaging;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = FA645DA02E3055F30090956D /* Project object */;
+}
