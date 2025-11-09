@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		5E212F3E2EC14EDF00EF5D90 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 5E212F3D2EC14EDF00EF5D90 /* GoogleService-Info.plist */; };
 		FA645DAC2E3055F30090956D /* Mail_Box_NotiferApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA645DAB2E3055F30090956D /* Mail_Box_NotiferApp.swift */; };
 		FA645DAE2E3055F30090956D /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA645DAD2E3055F30090956D /* ContentView.swift */; };
 		FA645DB02E3055F50090956D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = FA645DAF2E3055F50090956D /* Assets.xcassets */; };
@@ -17,7 +18,6 @@
 		FA645DD72E3057E30090956D /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = FA645DD62E3057E30090956D /* FirebaseAuth */; };
 		FA645DD92E3057E30090956D /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = FA645DD82E3057E30090956D /* FirebaseFirestore */; };
 		FA645DDB2E3057E30090956D /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = FA645DDA2E3057E30090956D /* FirebaseMessaging */; };
-		FACC462C2E306DF7005A3704 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = FACC462B2E306DF7005A3704 /* GoogleService-Info.plist */; };
 		FACC462F2E3076A4005A3704 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = FACC462E2E3076A3005A3704 /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
 
@@ -39,6 +39,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		5E212F3D2EC14EDF00EF5D90 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		FA40CD192E306B1700A9E809 /* Mail Box Notifer.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Mail Box Notifer.entitlements"; sourceTree = "<group>"; };
 		FA645DA82E3055F30090956D /* Mail Box Notifer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Mail Box Notifer.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		FA645DAB2E3055F30090956D /* Mail_Box_NotiferApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Mail_Box_NotiferApp.swift; sourceTree = "<group>"; };
@@ -50,7 +51,6 @@
 		FA645DC22E3055F60090956D /* Mail Box NotiferUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Mail Box NotiferUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		FA645DC62E3055F60090956D /* Mail_Box_NotiferUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Mail_Box_NotiferUITests.swift; sourceTree = "<group>"; };
 		FA645DC82E3055F60090956D /* Mail_Box_NotiferUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Mail_Box_NotiferUITestsLaunchTests.swift; sourceTree = "<group>"; };
-		FACC462B2E306DF7005A3704 /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = "GoogleService-Info.plist"; path = "../GoogleService-Info.plist"; sourceTree = "<group>"; };
 		FACC462D2E3071AD005A3704 /* Mail-Box-Notifer-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "Mail-Box-Notifer-Info.plist"; sourceTree = SOURCE_ROOT; };
 		FACC462E2E3076A3005A3704 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -86,7 +86,7 @@
 		FA645D9F2E3055F30090956D = {
 			isa = PBXGroup;
 			children = (
-				FACC462B2E306DF7005A3704 /* GoogleService-Info.plist */,
+				5E212F3D2EC14EDF00EF5D90 /* GoogleService-Info.plist */,
 				FA645DAA2E3055F30090956D /* Mail Box Notifer */,
 				FA645DBB2E3055F50090956D /* Mail Box NotiferTests */,
 				FA645DC52E3055F60090956D /* Mail Box NotiferUITests */,
@@ -257,7 +257,7 @@
 			files = (
 				FA645DB32E3055F50090956D /* Preview Assets.xcassets in Resources */,
 				FA645DB02E3055F50090956D /* Assets.xcassets in Resources */,
-				FACC462C2E306DF7005A3704 /* GoogleService-Info.plist in Resources */,
+				5E212F3E2EC14EDF00EF5D90 /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -461,9 +461,13 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "Notify.Mail-Box-Notifer";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -493,9 +497,13 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "Notify.Mail-Box-Notifer";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
