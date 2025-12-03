@@ -248,7 +248,7 @@
  mailDetected = detected
  }
  }
- 
+ /*
  func subscribeActiveTask() {
  guard let uid = Auth.auth().currentUser?.uid else { return }
  let deviceID = UIDevice.current.identifierForVendor?.uuidString ?? "unknown"
@@ -265,209 +265,259 @@
  activeTasksSummary = ""
  }
  }
- }
+ } */
+     func subscribeActiveTask() {
+         let uid = userUID
+         guard !uid.isEmpty else { return }
+         let deviceID = UIDevice.current.identifierForVendor?.uuidString ?? "unknown"
+         
+         db.collection("users").document(uid)
+             .collection("devices").document(deviceID)
+             .addSnapshotListener { snap, _ in
+                 guard let data = snap?.data() else { activeTasksSummary = ""; return }
+                 let listening = data["isListening"] as? Bool ?? false
+                 let task = data["task"] as? String ?? ""
+                 if listening, !task.isEmpty {
+                     activeTasksSummary = "Active: \(task)"
+                 } else {
+                     activeTasksSummary = ""
+                 }
+             }
+     }
  }
  
  // MARK: - Functions
  
- struct FunctionsView: View {
- let userUID: String
- 
- struct FunctionItem: Identifiable {
- enum Status { case available, planned, accessory }
- let id = UUID()
- let title: String
- let subtitle: String
- let systemImage: String
- let status: Status
- let info: String
- }
- 
- private var items: [FunctionItem] {
- [
- .init(
- title: "Mailbox Notifier",
- subtitle: "Detect mail + push alerts",
- systemImage: "envelope.badge",
- status: .available,
- info: "Uses screen auto-brightness change (no camera) to detect openings. Sends push to all signed-in devices via FCM."
- ),
- .init(
- title: "Security Camera",
- subtitle: "Visual checks (coming soon)",
- systemImage: "camera.viewfinder",
- status: .planned,
- info: "Turn your old phone into a basic security camera with snapshots or short clips. Logic coming in a future update."
- ),
- .init(
- title: "Vibration Sensor",
- subtitle: "Detect motion / vibration",
- systemImage: "waveform.path.ecg",
- status: .available,
- info: "Use the accelerometer to detect vibration from appliances, tools, vehicles, or footsteps. Configure a custom notification for any spike."
- ),
- .init(
- title: "Sound Sensor",
- subtitle: "Noise / knock detection",
- systemImage: "ear.badge.waveform",
- status: .available,
- info: "Listen for sound spikes (knocks, barks, alarms, machinery). All audio stays on-device; only events and alerts are sent."
- ),
- .init(
- title: "Presence",
- subtitle: "Sense nearby activity",
- systemImage: "dot.radiowaves.up.forward",
- status: .available,
- info: "Use subtle device motion to infer nearby activity while the app is active. Great for quick “someone is around this area” pings."
- ),
- .init(
- title: "Time-lapse",
- subtitle: "Interval photos",
- systemImage: "timer",
- status: .planned,
- info: "Capture frames on an interval and build a time-lapse locally. Option to sync to cloud later."
- ),
- .init(
- title: "QR / Barcode",
- subtitle: "Scan & log",
- systemImage: "qrcode.viewfinder",
- status: .available,
- info: "Use the camera to scan codes and log events (arrivals, packages)."
- ),
- .init(
- title: "Dashcam",
- subtitle: "Auto-record while moving",
- systemImage: "car.rear.fill",
- status: .planned,
- info: "Records when motion exceeds threshold and device is powered. Overwrites oldest clips (ring buffer)."
- ),
- .init(
- title: "Baby Monitor",
- subtitle: "Low-latency audio",
- systemImage: "figure.2.and.child.holdinghands",
- status: .planned,
- info: "One-tap audio streaming to another device in the app. Local network preferred."
- ),
- .init(
- title: "Pet Watcher",
- subtitle: "Motion + barks",
- systemImage: "pawprint.fill",
- status: .planned,
- info: "Detects motion in a zone and higher SPL spikes suggestive of barks; sends a clip and alert."
- ),
- .init(
- title: "Doorbell / Knock",
- subtitle: "Detect door knocks",
- systemImage: "bell.circle.fill",
- status: .available,
- info: "Use sound + motion combo near a door to detect knocks/rings and push an alert with timestamp."
- ),
- .init(
- title: "Light Level",
- subtitle: "Via camera analysis",
- systemImage: "lightbulb.fill",
- status: .available,
- info: "Approximates ambient light using the camera feed (iOS does not expose the ambient light sensor directly to apps)."
- )
- ]
- }
- 
- @State private var query = ""
- 
- var body: some View {
- ScrollView {
- VStack(alignment: .leading, spacing: 16) {
- header
- searchBar
- grid
- }
- .padding(.horizontal)
- .padding(.top, 16)
- }
- .navigationTitle("Functions")
- }
- 
- private var header: some View {
- VStack(alignment: .leading, spacing: 6) {
- Text("Put Your Old Phone to Work")
- .font(.title2.bold())
- Text("Choose a function to turn this device into a sensor, notifier, or simple camera. You can customize every use case.")
- .font(.subheadline)
- .foregroundStyle(.secondary)
- }
- }
- 
- private var searchBar: some View {
- HStack {
- Image(systemName: "magnifyingglass")
- TextField("Search functions", text: $query)
- .textInputAutocapitalization(.never)
- .disableAutocorrection(true)
- }
- .padding(10)
- .background(.ultraThinMaterial)
- .clipShape(RoundedRectangle(cornerRadius: 12))
- }
- 
- private var grid: some View {
- let filtered = items.filter {
- query.isEmpty
- ? true
- : ($0.title + $0.subtitle + $0.info).localizedCaseInsensitiveContains(query)
- }
- return LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
- ForEach(filtered) { item in
- NavigationLink {
- FunctionDetailView(userUID: userUID, item: item)
- } label: {
- FunctionCard(item: item)
- }
- .buttonStyle(.plain)
- }
- }
- }
- }
- 
- struct FunctionCard: View {
- let item: FunctionsView.FunctionItem
- 
- var body: some View {
- VStack(alignment: .leading, spacing: 10) {
- HStack {
- Image(systemName: item.systemImage)
- .font(.system(size: 28, weight: .semibold))
- Spacer()
- statusBadge
- }
- Text(item.title)
- .font(.headline)
- Text(item.subtitle)
- .font(.caption)
- .foregroundStyle(.secondary)
- }
- .padding(14)
- .frame(maxWidth: .infinity, minHeight: 110, alignment: .topLeading)
- .background(.thinMaterial)
- .clipShape(RoundedRectangle(cornerRadius: 16))
- }
- 
- @ViewBuilder private var statusBadge: some View {
- switch item.status {
- case .available:
- Label("Available", systemImage: "checkmark.circle.fill")
- .font(.caption2).foregroundStyle(.green)
- case .planned:
- Label("Planned", systemImage: "clock.badge.checkmark")
- .font(.caption2).foregroundStyle(.orange)
- case .accessory:
- Label("Accessory", systemImage: "bolt.shield.fill")
- .font(.caption2).foregroundStyle(.blue)
- }
- }
- }
- 
+struct FunctionsView: View {
+    let userUID: String
+    
+    struct FunctionItem: Identifiable {
+        enum Status { case available, planned, accessory }
+        let id = UUID()
+        let title: String
+        let subtitle: String
+        let systemImage: String
+        let status: Status
+        let info: String
+    }
+    
+    private var items: [FunctionItem] {
+        [
+            .init(
+                title: "Mailbox Notifier",
+                subtitle: "Screen brightness / light change",
+                systemImage: "envelope.badge",
+                status: .available,
+                info: "Listens for big changes in screen brightness (for example, a mailbox door opening) so you can build your own light-change use cases."
+            ),
+            .init(
+                title: "Security Camera",
+                subtitle: "Visual checks (coming soon)",
+                systemImage: "camera.viewfinder",
+                status: .planned,
+                info: "Turn your old phone into a basic security camera with snapshots or short clips. Logic coming in a future update."
+            ),
+            .init(
+                title: "Vibration Sensor",
+                subtitle: "Detect motion / vibration",
+                systemImage: "waveform.path.ecg",
+                status: .available,
+                info: "Use the accelerometer to detect vibration from appliances, tools, vehicles, or footsteps. Configure a custom notification for any spike."
+            ),
+            .init(
+                title: "Sound Sensor",
+                subtitle: "Noise / knock detection",
+                systemImage: "ear.badge.waveform",
+                status: .available,
+                info: "Listen for sound spikes (knocks, barks, alarms, machinery). All audio stays on-device; only events and alerts are sent."
+            ),
+            .init(
+                title: "Presence",
+                subtitle: "Sense nearby activity",
+                systemImage: "dot.radiowaves.up.forward",
+                status: .available,
+                info: "Use subtle device motion to infer nearby activity while the app is active. Great for quick “someone is around this area” pings."
+            ),
+            .init(
+                title: "Time-lapse",
+                subtitle: "Interval photos",
+                systemImage: "timer",
+                status: .planned,
+                info: "Capture frames on an interval and build a time-lapse locally. Option to sync to cloud later."
+            ),
+            .init(
+                title: "QR / Barcode",
+                subtitle: "Scan & log",
+                systemImage: "qrcode.viewfinder",
+                status: .available,
+                info: "Use the camera to scan codes and log events (arrivals, packages)."
+            ),
+            .init(
+                title: "Dashcam",
+                subtitle: "Auto-record while moving",
+                systemImage: "car.rear.fill",
+                status: .planned,
+                info: "Records when motion exceeds threshold and device is powered. Overwrites oldest clips (ring buffer)."
+            ),
+            .init(
+                title: "Baby Monitor",
+                subtitle: "Low-latency audio",
+                systemImage: "figure.2.and.child.holdinghands",
+                status: .planned,
+                info: "One-tap audio streaming to another device in the app. Local network preferred."
+            ),
+            .init(
+                title: "Pet Watcher",
+                subtitle: "Motion + barks",
+                systemImage: "pawprint.fill",
+                status: .planned,
+                info: "Detects motion in a zone and higher SPL spikes suggestive of barks; sends a clip and alert."
+            ),
+            .init(
+                title: "Power Loss",
+                subtitle: "Detect charger unplug / restore",
+                systemImage: "bolt.slash.circle",
+                status: .available,
+                info: "Monitors this device’s charging state. Get notified when power is lost or restored, e.g., a tripped breaker or someone unplugging the phone."
+            ),
+            .init(
+                title: "Doorbell / Knock",
+                subtitle: "Detect door knocks",
+                systemImage: "bell.circle.fill",
+                status: .available,
+                info: "Use sound + motion combo near a door to detect knocks/rings and push an alert with timestamp."
+            ),
+            .init(
+                title: "Multi Sense",
+                subtitle: "Combine multiple sensors",
+                systemImage: "waveform.badge.mic",
+                status: .planned,
+                info: "A combined mode that can run multiple sensors (sound, vibration, presence) at once on a single device. Logic coming in a future update."
+            ),
+            .init(
+                title: "Light Level",
+                subtitle: "Via camera analysis",
+                systemImage: "lightbulb.fill",
+                status: .available,
+                info: "Approximates ambient light using the camera feed (iOS does not expose the ambient light sensor directly to apps)."
+            ),
+            .init(
+                title: "Level Sensor",
+                subtitle: "Notify on tilt angle",
+                systemImage: "triangle.lefthalf.filled",
+                status: .available,
+                info: "Uses device motion to estimate tilt angle. You choose how tilted (e.g. 45°) and what notification to send."
+            )
+        ]
+    }
+    
+    @State private var query = ""
+    
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                header
+                searchBar
+                grid
+            }
+            .padding(.horizontal)
+            .padding(.top, 16)
+        }
+        .navigationTitle("Functions")
+    }
+    
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Put Your Old Phone to Work")
+                .font(.title2.bold())
+            Text("Choose a function to turn this device into a sensor, notifier, or simple camera. You can customize every use case.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+    }
+    
+    private var searchBar: some View {
+        HStack {
+            Image(systemName: "magnifyingglass")
+            TextField("Search functions", text: $query)
+                .textInputAutocapitalization(.never)
+                .disableAutocorrection(true)
+        }
+        .padding(10)
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+    
+    private var grid: some View {
+        let filtered = items.filter {
+            query.isEmpty
+            ? true
+            : ($0.title + $0.subtitle + $0.info).localizedCaseInsensitiveContains(query)
+        }
+        return LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+            ForEach(filtered) { item in
+                NavigationLink {
+                    FunctionDetailView(userUID: userUID, item: item)
+                } label: {
+                    FunctionCard(item: item)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+}
+struct FunctionCard: View {
+    let item: FunctionsView.FunctionItem
+    
+    // UI-only name so we don't change any underlying logic / Firestore keys.
+    private var displayTitle: String {
+        item.title == "Mailbox Notifier" ? "Light Change" : item.title
+    }
+    
+    private var displaySubtitle: String {
+        if item.title == "Mailbox Notifier" {
+            return "Screen brightness / light change"
+        }
+        return item.subtitle
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Image(systemName: item.systemImage)
+                    .font(.system(size: 28, weight: .semibold))
+                Spacer()
+                statusBadge
+            }
+            Text(displayTitle)
+                .font(.headline)
+            Text(displaySubtitle)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, minHeight: 110, alignment: .topLeading)
+        .background(.thinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+    
+    @ViewBuilder private var statusBadge: some View {
+        switch item.status {
+        case .available:
+            Label("Available", systemImage: "checkmark.circle.fill")
+                .font(.caption2).foregroundStyle(.green)
+        case .planned:
+            Label("Planned", systemImage: "clock.badge.checkmark")
+                .font(.caption2).foregroundStyle(.orange)
+        case .accessory:
+            Label("Accessory", systemImage: "bolt.shield.fill")
+                .font(.caption2).foregroundStyle(.blue)
+        }
+    }
+}
+
  // MARK: - Devices
- 
+ /*
  struct Device: Identifiable {
  let id: String
  let model: String
@@ -495,7 +545,42 @@
  self.task = data["task"] as? String
  }
  }
- 
+ */
+
+struct Device: Identifiable {
+    let id: String
+    let model: String
+    let name: String
+    let bundleID: String
+    let systemVersion: String
+    let isActive: Bool
+    let updatedAt: Date?
+    let token: String?
+    let battery: Int?
+    let isListening: Bool
+    let task: String?
+    let batteryState: String?
+    let isPluggedIn: Bool?
+    let lowPowerMode: Bool?
+    
+    init(id: String, data: [String: Any]) {
+        self.id = id
+        self.model = data["model"] as? String ?? "Unknown"
+        self.name = data["name"] as? String ?? ""
+        self.bundleID = data["bundleID"] as? String ?? ""
+        self.systemVersion = data["systemVersion"] as? String ?? ""
+        self.isActive = data["isActive"] as? Bool ?? false
+        self.updatedAt = (data["updatedAt"] as? Timestamp)?.dateValue()
+        self.token = data["token"] as? String
+        self.battery = data["battery"] as? Int
+        self.isListening = data["isListening"] as? Bool ?? false
+        self.task = data["task"] as? String
+        self.batteryState = data["batteryState"] as? String
+        self.isPluggedIn = data["isPluggedIn"] as? Bool
+        self.lowPowerMode = data["lowPowerMode"] as? Bool
+    }
+}
+
  struct DevicesView: View {
  let userUID: String
  @State private var devices: [Device] = []
@@ -550,6 +635,23 @@
  .font(.caption)
  .foregroundStyle(.secondary)
  }
+ }
+     HStack(spacing: 6) {
+     if let plugged = device.isPluggedIn {
+         Text(plugged ? "On charger" : "On battery")
+             .font(.caption)
+             .foregroundStyle(.secondary)
+     }
+     if let state = device.batteryState, !state.isEmpty {
+         Text("· \(state.capitalized)")
+             .font(.caption)
+             .foregroundStyle(.secondary)
+     }
+     if let lpm = device.lowPowerMode, lpm {
+         Text("· Low Power Mode")
+             .font(.caption)
+             .foregroundStyle(.orange)
+     }
  }
  if let updated = device.updatedAt {
  Text(updated, style: .relative)
@@ -742,20 +844,35 @@
  }
  
  // MARK: - Function Config Models
- 
+struct MailboxNotifierConfig {
+    var useCaseName: String
+    var notificationTitle: String
+    var notificationBody: String
+}
  struct VibrationSensorConfig {
  let useCaseName: String
  let notificationTitle: String
  let notificationBody: String
  }
- 
+struct LevelSensorConfig {
+    let useCaseName: String
+    let notificationTitle: String
+    let notificationBody: String
+    let targetAngle: Double
+}
  struct SoundSensorConfig {
  let useCaseName: String
  let notificationTitle: String
  let notificationBody: String
  let threshold: Float
  }
- 
+struct PowerLossConfig {
+    var useCaseName: String
+    var pluggedInTitle: String
+    var pluggedInBody: String
+    var unpluggedTitle: String
+    var unpluggedBody: String
+}
  struct PresenceSensorConfig {
  let useCaseName: String
  let notificationTitle: String
@@ -764,112 +881,651 @@
  
  // MARK: - Function Detail (Enable + Specialized Setup)
  
- struct FunctionDetailView: View {
- let userUID: String
- let item: FunctionsView.FunctionItem
- @State private var isEnabling = false
- @State private var enabled = false
- 
- var body: some View {
- ScrollView {
- VStack(alignment: .leading, spacing: 16) {
- HStack(spacing: 12) {
- Image(systemName: item.systemImage)
- .font(.system(size: 34, weight: .bold))
- VStack(alignment: .leading) {
- Text(item.title).font(.title2.bold())
- Text(item.subtitle)
- .font(.subheadline)
- .foregroundStyle(.secondary)
- }
- Spacer()
- }
- 
- Text(item.info)
- .font(.body)
- 
- Divider()
- 
- VStack(alignment: .leading, spacing: 8) {
- Text("Setup Preview").font(.headline)
- Text("Tapping Enable will create or update a config document for \(item.title) under your user profile. You can adjust use-case and notification text for sensor-based functions.")
- .font(.caption)
- .foregroundStyle(.secondary)
- }
- 
- Button {
- enableFunction()
- } label: {
- if isEnabling {
- ProgressView().frame(maxWidth: .infinity)
- } else {
- Label(
- enabled ? "Enabled" : "Enable \(item.title)",
- systemImage: enabled ? "checkmark.circle" : "play.circle"
- )
- .frame(maxWidth: .infinity)
- }
- }
- .buttonStyle(.borderedProminent)
- .disabled(isEnabling)
- 
- // Mailbox-specific UI
- if item.title == "Mailbox Notifier" {
- Divider().padding(.top, 8)
- MailboxNotifierSetupView()
- } else if item.title == "Vibration Sensor" {
- Divider().padding(.top, 8)
- VibrationSensorSetupView(functionTitle: item.title)
- } else if item.title == "Sound Sensor" {
- Divider().padding(.top, 8)
- SoundSensorSetupView(functionTitle: item.title)
- } else if item.title == "Presence" {
- Divider().padding(.top, 8)
- PresenceSensorSetupView(functionTitle: item.title)
- }
- // Security Camera + other planned functions are UI-only for now
- }
- .padding()
- }
- .navigationTitle(item.title)
- .navigationBarTitleDisplayMode(.inline)
- }
- 
- private func enableFunction() {
- guard !isEnabling, let uid = Auth.auth().currentUser?.uid else { return }
- isEnabling = true
- let db = Firestore.firestore()
- let doc = db.collection("users").document(uid)
- .collection("functions").document(item.title)
- let payload: [String: Any] = [
- "title": item.title,
- "subtitle": item.subtitle,
- "status": "enabled",
- "updatedAt": FieldValue.serverTimestamp()
- ]
- doc.setData(payload, merge: true) { _ in
- isEnabling = false
- enabled = true
- }
- }
- }
- 
+struct FunctionDetailView: View {
+    let userUID: String
+    let item: FunctionsView.FunctionItem
+    @State private var isEnabling = false
+    @State private var enabled = false
+    
+    private var displayTitle: String {
+        item.title == "Mailbox Notifier" ? "Light Change" : item.title
+    }
+    
+    private var displaySubtitle: String {
+        if item.title == "Mailbox Notifier" {
+            return "Screen brightness / light change"
+        }
+        return item.subtitle
+    }
+    
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(spacing: 12) {
+                    Image(systemName: item.systemImage)
+                        .font(.system(size: 34, weight: .bold))
+                    VStack(alignment: .leading) {
+                        Text(displayTitle).font(.title2.bold())
+                        Text(displaySubtitle)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                }
+                
+                Text(item.info)
+                    .font(.body)
+                
+                Divider()
+                
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Setup Preview").font(.headline)
+                    Text("Tapping Enable will create or update a config document for \(item.title) under your user profile. You can adjust use-case and notification text for sensor-based functions.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                
+                Button {
+                    enableFunction()
+                } label: {
+                    if isEnabling {
+                        ProgressView().frame(maxWidth: .infinity)
+                    } else {
+                        Label(
+                            enabled ? "Enabled" : "Enable \(displayTitle)",
+                            systemImage: enabled ? "checkmark.circle" : "play.circle"
+                        )
+                        .frame(maxWidth: .infinity)
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(isEnabling)
+                
+                // Per-function setup views
+                if item.title == "Mailbox Notifier" {
+                    Divider().padding(.top, 8)
+                    MailboxNotifierSetupView()
+                } else if item.title == "Vibration Sensor" {
+                    Divider().padding(.top, 8)
+                    VibrationSensorSetupView(functionTitle: item.title)
+                } else if item.title == "Sound Sensor" {
+                    Divider().padding(.top, 8)
+                    SoundSensorSetupView(functionTitle: item.title)
+                } else if item.title == "Presence" {
+                    Divider().padding(.top, 8)
+                } else if item.title == "Power Loss" {
+                    Divider().padding(.top, 8)
+                    PowerLossSetupView(functionTitle: item.title)
+                } else if item.title == "Level Sensor" {
+                    Divider().padding(.top, 8)
+                    LevelSensorSetupView(functionTitle: item.title)
+                }
+                
+                // Existing behavior: Presence setup view is always shown.
+                PresenceSensorSetupView(functionTitle: item.title)
+            }
+        }
+        .padding()
+        .navigationTitle(displayTitle)
+        .navigationBarTitleDisplayMode(.inline)
+    }
+    
+    private func enableFunction() {
+        guard !isEnabling, let uid = Auth.auth().currentUser?.uid else { return }
+        isEnabling = true
+        let db = Firestore.firestore()
+        let doc = db.collection("users").document(uid)
+            .collection("functions").document(item.title)
+        let payload: [String: Any] = [
+            "title": item.title,
+            "subtitle": item.subtitle,
+            "status": "enabled",
+            "updatedAt": FieldValue.serverTimestamp()
+        ]
+        doc.setData(payload, merge: true) { _ in
+            isEnabling = false
+            enabled = true
+        }
+    }
+}
+struct LevelListeningView: View {
+    let config: LevelSensorConfig
+    
+    @State private var status: String = "calibrating…"
+    @State private var currentAngle: Double = 0
+    @State private var lastTriggerAt: Date = .distantPast
+    private let cooldown: TimeInterval = 10
+    
+    private let motionManager = CMMotionManager()
+    private let updateInterval = 0.2
+    
+    private let db = Firestore.firestore()
+    @AppStorage("userUID") private var userUID: String = ""
+    private var deviceID: String { UIDevice.current.identifierForVendor?.uuidString ?? "unknown" }
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            HStack {
+                Image(systemName: "triangle.lefthalf.filled")
+                    .font(.system(size: 36, weight: .bold))
+                    .foregroundStyle(.purple)
+                VStack(alignment: .leading) {
+                    Text(config.useCaseName)
+                        .font(.title3.bold())
+                    Text(status)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+            
+            HStack(spacing: 12) {
+                Tag("angle: " + String(format: "%.0f°", currentAngle))
+                Tag("target: " + String(format: "%.0f°", config.targetAngle))
+            }
+            
+            Text("This sensor uses device motion to estimate tilt. When the phone tilts past your target angle (e.g. 45°), we'll send your custom notification.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.top, 4)
+            
+            Spacer()
+            
+            Button(role: .destructive) {
+                stopListening()
+            } label: {
+                Label("Stop Listening", systemImage: "stop.circle")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+        }
+        .padding()
+        .navigationTitle("Level Sensor")
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            UIApplication.shared.isIdleTimerDisabled = true
+            status = "listening…"
+            
+            if let uid = Auth.auth().currentUser?.uid {
+                DeviceHeartbeat.shared.start(userUID: uid, deviceID: deviceID)
+                DeviceHeartbeat.shared.setListening(true, task: config.useCaseName)
+            }
+            
+            startMotion()
+        }
+        .onDisappear {
+            stopListening()
+        }
+    }
+    
+    private func startMotion() {
+        guard motionManager.isDeviceMotionAvailable else {
+            status = "no motion data"
+            return
+        }
+        
+        motionManager.deviceMotionUpdateInterval = updateInterval
+        motionManager.startDeviceMotionUpdates(to: .main) { motion, _ in
+            guard let motion = motion else { return }
+            
+            // Use pitch magnitude as a simple "tilt" measure in degrees.
+            let pitch = motion.attitude.pitch // radians
+            let angle = abs(pitch) * 180 / .pi
+            currentAngle = angle
+            
+            let now = Date()
+            if angle >= config.targetAngle,
+               now.timeIntervalSince(lastTriggerAt) >= cooldown {
+                lastTriggerAt = now
+                status = "tilt reached"
+                fireLevelEvent(angle: angle)
+            } else if angle < config.targetAngle {
+                status = "listening…"
+            }
+        }
+    }
+    
+    private func fireLevelEvent(angle: Double) {
+        guard !userUID.isEmpty, let uid = Auth.auth().currentUser?.uid else { return }
+        
+        db.collection("users").document(uid)
+            .setData(["lastLevelEventAt": FieldValue.serverTimestamp()],
+                     merge: true)
+        
+        if let url = URL(string: "https://us-central1-notifymailbox-d9657.cloudfunctions.net/sendMailNotification") {
+            var req = URLRequest(url: url)
+            req.httpMethod = "POST"
+            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            let payload: [String: Any] = [
+                "userId": uid,
+                "title": config.notificationTitle,
+                "body": config.notificationBody
+            ]
+            req.httpBody = try? JSONSerialization.data(withJSONObject: payload)
+            URLSession.shared.dataTask(with: req).resume()
+        }
+    }
+    
+    private func stopListening() {
+        UIApplication.shared.isIdleTimerDisabled = false
+        motionManager.stopDeviceMotionUpdates()
+        if let uid = Auth.auth().currentUser?.uid {
+            DeviceHeartbeat.shared.setListening(false)
+            DeviceHeartbeat.shared.stop()
+            Firestore.firestore()
+                .collection("users").document(uid)
+                .collection("devices").document(deviceID)
+                .setData(["isListening": false], merge: true)
+        }
+    }
+}
+struct LevelSensorSetupView: View {
+    let functionTitle: String
+    
+    @State private var allowNotifications = false
+    @State private var disableAutoLock = false
+    @State private var keepPluggedIn = false
+    @State private var securePlacement = false
+    
+    @State private var useCaseName: String = ""
+    @State private var notificationTitle: String = ""
+    @State private var notificationBody: String = ""
+    @State private var angleString: String = "45"
+    
+    @State private var pushToListening = false
+    
+    private let db = Firestore.firestore()
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Before You Begin").font(.headline)
+            
+            VStack(alignment: .leading, spacing: 10) {
+                ChecklistRow(isOn: $allowNotifications,
+                             title: "Allow Notifications",
+                             subtitle: "Settings → Notifications → Allow for this app.")
+                ChecklistRow(isOn: $disableAutoLock,
+                             title: "Disable Auto-Lock (Temporarily)",
+                             subtitle: "Settings → Display & Brightness → Auto-Lock → longer while testing.")
+                ChecklistRow(isOn: $keepPluggedIn,
+                             title: "Keep Device Plugged In",
+                             subtitle: "Recommended when monitoring tilt over time.")
+                ChecklistRow(isOn: $securePlacement,
+                             title: "Secure the Phone",
+                             subtitle: "Place where it can tilt but won't fall (shelf, bracket, stand, etc.).")
+            }
+            .padding(12)
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Customize This Sensor").font(.headline)
+                
+                TextField("What is this watching? (e.g. Garage door, Shelf, Gate)",
+                          text: $useCaseName)
+                    .textFieldStyle(.roundedBorder)
+                
+                TextField("Notification title (e.g. \"Tilt reached\")",
+                          text: $notificationTitle)
+                    .textFieldStyle(.roundedBorder)
+                
+                TextField("Notification body (e.g. \"Device tilted past 45°.\")",
+                          text: $notificationBody)
+                    .textFieldStyle(.roundedBorder)
+                
+                TextField("Target tilt angle in ° (e.g. 45)",
+                          text: $angleString)
+                    .keyboardType(.numberPad)
+                    .textFieldStyle(.roundedBorder)
+            }
+            
+            Button {
+                saveConfig()
+                pushToListening = true
+            } label: {
+                Label("Start Level Sensor", systemImage: "triangle.lefthalf.filled")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(!allRequiredChecks)
+            .animation(.easeInOut, value: allRequiredChecks)
+            
+            NavigationLink(isActive: $pushToListening) {
+                let rawAngle = Double(angleString) ?? 45
+                let clamped = max(5, min(85, rawAngle))
+                let cfg = LevelSensorConfig(
+                    useCaseName: useCaseName.isEmpty ? "Level Sensor" : useCaseName,
+                    notificationTitle: notificationTitle.isEmpty ? "Tilt angle reached" : notificationTitle,
+                    notificationBody: notificationBody.isEmpty ? "The device tilted past your configured angle." : notificationBody,
+                    targetAngle: clamped
+                )
+                LevelListeningView(config: cfg)
+            } label: {
+                EmptyView()
+            }
+            .hidden()
+        }
+        .onAppear {
+            loadConfig()
+        }
+    }
+    
+    private var allRequiredChecks: Bool {
+        allowNotifications && disableAutoLock && keepPluggedIn && securePlacement
+    }
+    
+    private func loadConfig() {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        db.collection("users").document(uid)
+            .collection("functions").document(functionTitle)
+            .getDocument { snap, _ in
+                guard let data = snap?.data() else { return }
+                useCaseName = data["useCaseName"] as? String ?? useCaseName
+                notificationTitle = data["notificationTitle"] as? String ?? notificationTitle
+                notificationBody = data["notificationBody"] as? String ?? notificationBody
+                if let deg = data["targetAngle"] as? Double {
+                    angleString = String(format: "%.0f", deg)
+                }
+            }
+    }
+    
+    private func saveConfig() {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        let rawAngle = Double(angleString) ?? 45
+        let clamped = max(5, min(85, rawAngle))
+        let payload: [String: Any] = [
+            "useCaseName": useCaseName,
+            "notificationTitle": notificationTitle,
+            "notificationBody": notificationBody,
+            "targetAngle": clamped,
+            "updatedAt": FieldValue.serverTimestamp()
+        ]
+        db.collection("users").document(uid)
+            .collection("functions").document(functionTitle)
+            .setData(payload, merge: true)
+    }
+}
+struct PowerLossSetupView: View {
+    let functionTitle: String
+    
+    @State private var allowNotifications = false
+    @State private var keepPluggedIn = false
+    @State private var disableAutoLock = false
+    
+    @State private var config = PowerLossConfig(
+        useCaseName: "Power Loss",
+        pluggedInTitle: "Power restored",
+        pluggedInBody: "Charger power has been restored.",
+        unpluggedTitle: "Power lost",
+        unpluggedBody: "This device stopped charging."
+    )
+    
+    @State private var pushToListening = false
+    
+    private let db = Firestore.firestore()
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Before You Begin").font(.headline)
+            
+            VStack(alignment: .leading, spacing: 10) {
+                ChecklistRow(isOn: $allowNotifications,
+                             title: "Allow Notifications",
+                             subtitle: "Settings → Notifications → Allow for this app.")
+                ChecklistRow(isOn: $keepPluggedIn,
+                             title: "Keep Device Plugged In",
+                             subtitle: "Place near a reliable power outlet you want to monitor.")
+                ChecklistRow(isOn: $disableAutoLock,
+                             title: "Disable Auto-Lock (Temporarily)",
+                             subtitle: "Recommended while testing.")
+            }
+            .padding(12)
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Customize Notifications").font(.headline)
+                
+                TextField("Use-case name (e.g. Garage outlet)", text: $config.useCaseName)
+                    .textFieldStyle(.roundedBorder)
+                
+                Text("When power is restored").font(.caption).foregroundStyle(.secondary)
+                TextField("Title", text: $config.pluggedInTitle)
+                    .textFieldStyle(.roundedBorder)
+                TextField("Body", text: $config.pluggedInBody)
+                    .textFieldStyle(.roundedBorder)
+                
+                Text("When power is lost").font(.caption).foregroundStyle(.secondary)
+                TextField("Title", text: $config.unpluggedTitle)
+                    .textFieldStyle(.roundedBorder)
+                TextField("Body", text: $config.unpluggedBody)
+                    .textFieldStyle(.roundedBorder)
+            }
+            
+            Button {
+                saveConfig()
+                pushToListening = true
+            } label: {
+                Label("Start Power Loss Monitor", systemImage: "bolt.slash.circle")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(!allRequiredChecks)
+            .animation(.easeInOut, value: allRequiredChecks)
+            
+            NavigationLink(isActive: $pushToListening) {
+                PowerLossListeningView(config: config)
+            } label: {
+                EmptyView()
+            }
+            .hidden()
+        }
+        .onAppear {
+            loadConfig()
+        }
+    }
+    
+    private var allRequiredChecks: Bool {
+        allowNotifications && keepPluggedIn && disableAutoLock
+    }
+    
+    private func loadConfig() {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        db.collection("users").document(uid)
+            .collection("functions").document(functionTitle)
+            .getDocument { snap, _ in
+                guard let data = snap?.data() else { return }
+                config.useCaseName = data["useCaseName"] as? String ?? config.useCaseName
+                config.pluggedInTitle = data["pluggedInTitle"] as? String ?? config.pluggedInTitle
+                config.pluggedInBody = data["pluggedInBody"] as? String ?? config.pluggedInBody
+                config.unpluggedTitle = data["unpluggedTitle"] as? String ?? config.unpluggedTitle
+                config.unpluggedBody = data["unpluggedBody"] as? String ?? config.unpluggedBody
+            }
+    }
+    
+    private func saveConfig() {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        let payload: [String: Any] = [
+            "useCaseName": config.useCaseName,
+            "pluggedInTitle": config.pluggedInTitle,
+            "pluggedInBody": config.pluggedInBody,
+            "unpluggedTitle": config.unpluggedTitle,
+            "unpluggedBody": config.unpluggedBody,
+            "updatedAt": FieldValue.serverTimestamp()
+        ]
+        db.collection("users").document(uid)
+            .collection("functions").document(functionTitle)
+            .setData(payload, merge: true)
+    }
+}
  // MARK: - Mailbox Notifier Setup + Listening (Brightness-based)
- 
- struct MailboxNotifierSetupView: View {
- @State private var allowNotifications = false
- @State private var disableAutoLock = false
- @State private var keepPluggedIn = false
- @State private var placePhoneFaceUp = false
- 
- @State private var hasStartedTimer = false
- @State private var countdown = 30
- @State private var pushToListening = false
- 
- private let ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
- 
- var body: some View {
- VStack(alignment: .leading, spacing: 16) {
+struct PowerLossListeningView: View {
+    let config: PowerLossConfig
+    
+    @State private var status: String = "listening…"
+    @State private var lastState: UIDevice.BatteryState = UIDevice.current.batteryState
+    @State private var lastTriggerAt: Date = .distantPast
+    private let cooldown: TimeInterval = 5
+    
+    private let db = Firestore.firestore()
+    @AppStorage("userUID") private var userUID: String = ""
+    private var deviceID: String { UIDevice.current.identifierForVendor?.uuidString ?? "unknown" }
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            HStack {
+                Image(systemName: "bolt.slash.circle")
+                    .font(.system(size: 36, weight: .bold))
+                    .foregroundStyle(.yellow)
+                VStack(alignment: .leading) {
+                    Text(config.useCaseName)
+                        .font(.title3.bold())
+                    Text(status)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+            
+            Text("This sensor watches when the device starts or stops charging. Use it to detect power loss or restoration at the outlet feeding this phone.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.top, 4)
+            
+            Spacer()
+            
+            Button(role: .destructive) {
+                stopListening()
+            } label: {
+                Label("Stop Listening", systemImage: "stop.circle")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+        }
+        .padding()
+        .navigationTitle("Power Loss")
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            UIApplication.shared.isIdleTimerDisabled = true
+            UIDevice.current.isBatteryMonitoringEnabled = true
+            
+            if let uid = Auth.auth().currentUser?.uid {
+                DeviceHeartbeat.shared.start(userUID: uid, deviceID: deviceID)
+                DeviceHeartbeat.shared.setListening(true, task: config.useCaseName)
+            }
+            
+            lastState = UIDevice.current.batteryState
+            status = describe(state: lastState)
+            
+            NotificationCenter.default.addObserver(
+                forName: UIDevice.batteryStateDidChangeNotification,
+                object: nil,
+                queue: .main
+            ) { [self] _ in
+                handleStateChange()
+            }
+        }
+        .onDisappear {
+            stopListening()
+        }
+    }
+    
+    private func describe(state: UIDevice.BatteryState) -> String {
+        switch state {
+        case .charging: return "charging"
+        case .full: return "full"
+        case .unplugged: return "on battery"
+        case .unknown: fallthrough
+        @unknown default: return "unknown"
+        }
+    }
+    
+    private func handleStateChange() {
+        let newState = UIDevice.current.batteryState
+        let now = Date()
+        lastState = newState
+        status = describe(state: newState)
+        
+        guard now.timeIntervalSince(lastTriggerAt) >= cooldown else { return }
+        lastTriggerAt = now
+        
+        switch newState {
+        case .charging, .full:
+            firePowerEvent(restored: true)
+        case .unplugged:
+            firePowerEvent(restored: false)
+        case .unknown:
+            break
+        @unknown default:
+            break
+        }
+    }
+    
+    private func firePowerEvent(restored: Bool) {
+        guard !userUID.isEmpty, let uid = Auth.auth().currentUser?.uid else { return }
+        
+        db.collection("users").document(uid)
+            .setData(["lastPowerEventAt": FieldValue.serverTimestamp()],
+                     merge: true)
+        
+        if let url = URL(string: "https://us-central1-notifymailbox-d9657.cloudfunctions.net/sendMailNotification") {
+            var req = URLRequest(url: url)
+            req.httpMethod = "POST"
+            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            let title = restored ? config.pluggedInTitle : config.unpluggedTitle
+            let body = restored ? config.pluggedInBody : config.unpluggedBody
+            let payload: [String: Any] = [
+                "userId": uid,
+                "title": title,
+                "body": body
+            ]
+            req.httpBody = try? JSONSerialization.data(withJSONObject: payload)
+            URLSession.shared.dataTask(with: req).resume()
+        }
+    }
+    
+    private func stopListening() {
+        UIApplication.shared.isIdleTimerDisabled = false
+        UIDevice.current.isBatteryMonitoringEnabled = false
+        NotificationCenter.default.removeObserver(
+            self,
+            name: UIDevice.batteryStateDidChangeNotification,
+            object: nil
+        )
+        if let uid = Auth.auth().currentUser?.uid {
+            DeviceHeartbeat.shared.setListening(false)
+            DeviceHeartbeat.shared.stop()
+            Firestore.firestore()
+                .collection("users").document(uid)
+                .collection("devices").document(deviceID)
+                .setData(["isListening": false], merge: true)
+        }
+    }
+}
+struct MailboxNotifierSetupView: View {
+    @State private var allowNotifications = false
+    @State private var disableAutoLock = false
+    @State private var keepPluggedIn = false
+    @State private var placePhoneFaceUp = false
+    
+    @State private var hasStartedTimer = false
+    @State private var countdown = 30
+    @State private var pushToListening = false
+    
+    @State private var config = MailboxNotifierConfig(
+        useCaseName: "Mailbox Notifier",
+        notificationTitle: "Mail detected",
+        notificationBody: "We detected a brightness change in your mailbox."
+    )
+    
+    private let ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    private let db = Firestore.firestore()
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            
  Text("Before You Begin").font(.headline)
  
  VStack(alignment: .leading, spacing: 10) {
@@ -889,12 +1545,24 @@
  .padding(12)
  .background(.ultraThinMaterial)
  .clipShape(RoundedRectangle(cornerRadius: 12))
- 
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Customize Notification").font(.headline)
+                
+                TextField("Use-case name (e.g. Front mailbox)", text: $config.useCaseName)
+                    .textFieldStyle(.roundedBorder)
+                
+                TextField("Notification title", text: $config.notificationTitle)
+                    .textFieldStyle(.roundedBorder)
+                
+                TextField("Notification body", text: $config.notificationBody)
+                    .textFieldStyle(.roundedBorder)
+            }
  if !hasStartedTimer && !pushToListening {
- Button {
- hasStartedTimer = true
- countdown = 30
- } label: {
+     Button {
+         saveConfig()
+         hasStartedTimer = true
+         countdown = 30
+     } label: {
  Label("I'm ready — start 30s placement timer", systemImage: "timer")
  .frame(maxWidth: .infinity)
  }
@@ -928,154 +1596,176 @@
  }
  }
  }
- 
- NavigationLink(isActive: $pushToListening) {
- MailboxListeningView()
- } label: {
- EmptyView()
- }
- .hidden()
+            NavigationLink(isActive: $pushToListening) {
+                MailboxListeningView(config: config)
+            } label: {
+                EmptyView()
+            }
+            .hidden()
+
  }
  }
  
  private var allRequiredChecks: Bool {
  allowNotifications && disableAutoLock && keepPluggedIn && placePhoneFaceUp
  }
- }
+    
+    
+    private func saveConfig() {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        let payload: [String: Any] = [
+            "useCaseName": config.useCaseName,
+            "notificationTitle": config.notificationTitle,
+            "notificationBody": config.notificationBody,
+            "updatedAt": FieldValue.serverTimestamp()
+        ]
+        db.collection("users").document(uid)
+            .collection("functions").document("Mailbox Notifier")
+            .setData(payload, merge: true)
+    }
+}
  
- struct MailboxListeningView: View {
- private let ratioThreshold: CGFloat = 1.8
- private let absoluteDelta: CGFloat = 0.12
- private let cooldownSeconds: TimeInterval = 12
  
- @State private var baseline: CGFloat = 0
- @State private var current: CGFloat = UIScreen.main.brightness
- @State private var status: String = "calibrating…"
- @State private var lastTriggerAt: Date = .distantPast
- @State private var hasTriggered: Bool = false
- 
- private let sampler = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
- 
- private let db = Firestore.firestore()
- @AppStorage("userUID") private var userUID: String = ""
- private var deviceID: String { UIDevice.current.identifierForVendor?.uuidString ?? "unknown" }
- 
- var body: some View {
- VStack(spacing: 16) {
- HStack {
- Image(systemName: hasTriggered ? "envelope.badge.fill" : "ear.badge.waveform")
- .font(.system(size: 36, weight: .bold))
- .foregroundStyle(hasTriggered ? .green : .blue)
- VStack(alignment: .leading) {
- Text(hasTriggered ? "Mail Detected" : "Listening for Door Open")
- .font(.title3.bold())
- Text(status)
- .font(.caption)
- .foregroundStyle(.secondary)
- }
- Spacer()
- }
- .frame(maxWidth: .infinity, alignment: .leading)
- 
- HStack(spacing: 12) {
- Tag("baseline: " + String(format: "%.3f", baseline))
- Tag("current: " + String(format: "%.3f", current))
- Tag("ratio: " + String(format: "%.2f", baseline > 0 ? current / baseline : 0))
- }
- 
- Text("Leave this phone in the mailbox with auto-brightness enabled. When the door opens and the screen brightens, we'll notify all your devices.")
- .font(.footnote)
- .foregroundStyle(.secondary)
- .multilineTextAlignment(.center)
- .padding(.top, 4)
- 
- Spacer()
- 
- Button(role: .destructive) {
- stopListening()
- } label: {
- Label("Stop Listening", systemImage: "stop.circle")
- .frame(maxWidth: .infinity)
- }
- .buttonStyle(.bordered)
- }
- .padding()
- .navigationTitle("Mailbox Notifier")
- .navigationBarTitleDisplayMode(.inline)
- .onAppear {
- baseline = max(UIScreen.main.brightness, 0.001)
- current = UIScreen.main.brightness
- status = "armed"
- UIApplication.shared.isIdleTimerDisabled = true
- 
- if let uid = Auth.auth().currentUser?.uid {
- DeviceHeartbeat.shared.start(userUID: uid, deviceID: deviceID)
- DeviceHeartbeat.shared.setListening(true, task: "Mailbox Notifier")
- }
- 
- NotificationCenter.default.addObserver(
- forName: UIScreen.brightnessDidChangeNotification,
- object: nil,
- queue: .main
- ) { [self] _ in
- self.sampleAndEvaluate()
- }
- }
- .onReceive(sampler) { _ in
- sampleAndEvaluate()
- }
- .onDisappear {
- stopListening()
- }
- }
- 
- private func sampleAndEvaluate() {
- current = UIScreen.main.brightness
- guard baseline > 0 else { return }
- let ratio = current / baseline
- let delta = current - baseline
- let canTrigger = Date().timeIntervalSince(lastTriggerAt) >= cooldownSeconds
- 
- if !hasTriggered && canTrigger && (ratio >= ratioThreshold || delta >= absoluteDelta) {
- lastTriggerAt = Date()
- hasTriggered = true
- status = "triggered"
- fireMailEvent()
- }
- }
- 
- private func fireMailEvent() {
- guard !userUID.isEmpty, let uid = Auth.auth().currentUser?.uid else { return }
- 
- db.collection("users").document(uid).setData(["mailDetected": true], merge: true)
- 
- if let url = URL(string: "https://us-central1-notifymailbox-d9657.cloudfunctions.net/sendMailNotification") {
- var req = URLRequest(url: url)
- req.httpMethod = "POST"
- req.setValue("application/json", forHTTPHeaderField: "Content-Type")
- req.httpBody = try? JSONSerialization.data(withJSONObject: ["userId": uid])
- URLSession.shared.dataTask(with: req).resume()
- }
- }
- 
- private func stopListening() {
- UIApplication.shared.isIdleTimerDisabled = false
- if let uid = Auth.auth().currentUser?.uid {
- DeviceHeartbeat.shared.setListening(false)
- DeviceHeartbeat.shared.stop()
- Firestore.firestore()
- .collection("users").document(uid)
- .collection("devices").document(deviceID)
- .setData(["isListening": false], merge: true)
- }
- NotificationCenter.default.removeObserver(
- self,
- name: UIScreen.brightnessDidChangeNotification,
- object: nil
- )
- }
- }
- 
+struct MailboxListeningView: View {
+    let config: MailboxNotifierConfig
+    
+    private let ratioThreshold: CGFloat = 1.8
+    private let absoluteDelta: CGFloat = 0.12
+    private let cooldownSeconds: TimeInterval = 12
+    
+    @State private var baseline: CGFloat = 0
+    @State private var current: CGFloat = UIScreen.main.brightness
+    @State private var status: String = "calibrating…"
+    @State private var lastTriggerAt: Date = .distantPast
+    @State private var hasTriggered: Bool = false
+    
+    private let sampler = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    
+    private let db = Firestore.firestore()
+    @AppStorage("userUID") private var userUID: String = ""
+    private var deviceID: String { UIDevice.current.identifierForVendor?.uuidString ?? "unknown" }
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            HStack {
+                Image(systemName: hasTriggered ? "envelope.badge.fill" : "ear.badge.waveform")
+                    .font(.system(size: 36, weight: .bold))
+                    .foregroundStyle(hasTriggered ? .green : .blue)
+                VStack(alignment: .leading) {
+                    Text(hasTriggered ? "Light Change Detected" : "Listening for Light Change")
+                        .font(.title3.bold())
+                    Text(status)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            
+            HStack(spacing: 12) {
+                Tag("baseline: " + String(format: "%.3f", baseline))
+                Tag("current: " + String(format: "%.3f", current))
+                Tag("ratio: " + String(format: "%.2f", baseline > 0 ? current / baseline : 0))
+            }
+            
+            Text("Place this phone in any spot where light changes dramatically (mailbox, cabinet, room, etc.). When the screen brightness jumps, we'll send your custom notification to all signed-in devices.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.top, 4)
+            
+            Spacer()
+            
+            Button(role: .destructive) {
+                stopListening()
+            } label: {
+                Label("Stop Listening", systemImage: "stop.circle")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+        }
+        .padding()
+        .navigationTitle("Light Change")
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            baseline = max(UIScreen.main.brightness, 0.001)
+            current = UIScreen.main.brightness
+            status = "armed"
+            UIApplication.shared.isIdleTimerDisabled = true
+            
+            if let uid = Auth.auth().currentUser?.uid {
+                DeviceHeartbeat.shared.start(userUID: uid, deviceID: deviceID)
+                DeviceHeartbeat.shared.setListening(true, task: "Mailbox Notifier")
+            }
+            
+            NotificationCenter.default.addObserver(
+                forName: UIScreen.brightnessDidChangeNotification,
+                object: nil,
+                queue: .main
+            ) { [self] _ in
+                self.sampleAndEvaluate()
+            }
+        }
+        .onReceive(sampler) { _ in
+            sampleAndEvaluate()
+        }
+        .onDisappear {
+            stopListening()
+        }
+    }
+    
+    private func sampleAndEvaluate() {
+        current = UIScreen.main.brightness
+        guard baseline > 0 else { return }
+        let ratio = current / baseline
+        let delta = current - baseline
+        let canTrigger = Date().timeIntervalSince(lastTriggerAt) >= cooldownSeconds
+        
+        if !hasTriggered && canTrigger && (ratio >= ratioThreshold || delta >= absoluteDelta) {
+            lastTriggerAt = Date()
+            hasTriggered = true
+            status = "triggered"
+            fireMailEvent()
+        }
+    }
+    
+    private func fireMailEvent() {
+        guard !userUID.isEmpty, let uid = Auth.auth().currentUser?.uid else { return }
+        
+        db.collection("users").document(uid).setData(["mailDetected": true], merge: true)
+        
+        if let url = URL(string: "https://us-central1-notifymailbox-d9657.cloudfunctions.net/sendMailNotification") {
+            var req = URLRequest(url: url)
+            req.httpMethod = "POST"
+            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            let payload: [String: Any] = [
+                "userId": uid,
+                "title": config.notificationTitle,
+                "body": config.notificationBody
+            ]
+            req.httpBody = try? JSONSerialization.data(withJSONObject: payload)
+            URLSession.shared.dataTask(with: req).resume()
+        }
+    }
+    
+    private func stopListening() {
+        UIApplication.shared.isIdleTimerDisabled = false
+        if let uid = Auth.auth().currentUser?.uid {
+            DeviceHeartbeat.shared.setListening(false)
+            DeviceHeartbeat.shared.stop()
+            Firestore.firestore()
+                .collection("users").document(uid)
+                .collection("devices").document(deviceID)
+                .setData(["isListening": false], merge: true)
+        }
+        NotificationCenter.default.removeObserver(
+            self,
+            name: UIScreen.brightnessDidChangeNotification,
+            object: nil
+        )
+    }
+}
+
  // MARK: - Vibration Sensor (Config + Detector + Listening)
  
  final class VibrationDetector: ObservableObject {
@@ -1161,118 +1851,173 @@
  }
  }
  
- struct VibrationSensorSetupView: View {
- let functionTitle: String
- 
- @State private var allowNotifications = false
- @State private var disableAutoLock = false
- @State private var keepPluggedIn = false
- @State private var placeFirmly = false
- 
- @State private var useCaseName: String = ""
- @State private var notificationTitle: String = ""
- @State private var notificationBody: String = ""
- 
- @State private var pushToListening = false
- 
- private let db = Firestore.firestore()
- 
- var body: some View {
- VStack(alignment: .leading, spacing: 16) {
- Text("Before You Begin").font(.headline)
- 
- VStack(alignment: .leading, spacing: 10) {
- ChecklistRow(isOn: $allowNotifications,
- title: "Allow Notifications",
- subtitle: "Settings → Notifications → Allow for this app.")
- ChecklistRow(isOn: $disableAutoLock,
- title: "Disable Auto-Lock (Temporarily)",
- subtitle: "Settings → Display & Brightness → Auto-Lock → longer while testing.")
- ChecklistRow(isOn: $keepPluggedIn,
- title: "Keep Device Plugged In",
- subtitle: "Recommended for long-running monitoring.")
- ChecklistRow(isOn: $placeFirmly,
- title: "Place Phone Firmly on Surface",
- subtitle: "E.g., on a dryer, machine, vehicle, workbench, or shelf.")
- }
- .padding(12)
- .background(.ultraThinMaterial)
- .clipShape(RoundedRectangle(cornerRadius: 12))
- 
- VStack(alignment: .leading, spacing: 8) {
- Text("Customize This Sensor").font(.headline)
- 
- TextField("What are you monitoring? (e.g. Dryer, Generator, Workbench)",
- text: $useCaseName)
- .textFieldStyle(.roundedBorder)
- 
- TextField("Notification title (e.g. \"Vibration event\")",
- text: $notificationTitle)
- .textFieldStyle(.roundedBorder)
- 
- TextField("Notification body (e.g. \"Vibration spike detected on the dryer.\")",
- text: $notificationBody)
- .textFieldStyle(.roundedBorder)
- }
- 
- Button {
- saveConfig()
- pushToListening = true
- } label: {
- Label("Start Vibration Sensor", systemImage: "waveform.path.ecg")
- .frame(maxWidth: .infinity)
- }
- .buttonStyle(.borderedProminent)
- .disabled(!allRequiredChecks)
- .animation(.easeInOut, value: allRequiredChecks)
- 
- NavigationLink(isActive: $pushToListening) {
- let config = VibrationSensorConfig(
- useCaseName: useCaseName.isEmpty ? "Vibration Sensor" : useCaseName,
- notificationTitle: notificationTitle.isEmpty ? "Vibration sensor triggered" : notificationTitle,
- notificationBody: notificationBody.isEmpty ? "A vibration spike was detected by your sensor." : notificationBody
- )
- VibrationListeningView(config: config)
- } label: {
- EmptyView()
- }
- .hidden()
- }
- .onAppear {
- loadConfig()
- }
- }
- 
- private var allRequiredChecks: Bool {
- allowNotifications && disableAutoLock && keepPluggedIn && placeFirmly
- }
- 
- private func loadConfig() {
- guard let uid = Auth.auth().currentUser?.uid else { return }
- db.collection("users").document(uid)
- .collection("functions").document(functionTitle)
- .getDocument { snap, _ in
- guard let data = snap?.data() else { return }
- useCaseName = data["useCaseName"] as? String ?? useCaseName
- notificationTitle = data["notificationTitle"] as? String ?? notificationTitle
- notificationBody = data["notificationBody"] as? String ?? notificationBody
- }
- }
- 
- private func saveConfig() {
- guard let uid = Auth.auth().currentUser?.uid else { return }
- let payload: [String: Any] = [
- "useCaseName": useCaseName,
- "notificationTitle": notificationTitle,
- "notificationBody": notificationBody,
- "updatedAt": FieldValue.serverTimestamp()
- ]
- db.collection("users").document(uid)
- .collection("functions").document(functionTitle)
- .setData(payload, merge: true)
- }
- }
- 
+struct VibrationSensorSetupView: View {
+    let functionTitle: String
+    
+    @State private var allowNotifications = false
+    @State private var disableAutoLock = false
+    @State private var keepPluggedIn = false
+    @State private var placeFirmly = false
+    
+    @State private var useCaseName: String = ""
+    @State private var notificationTitle: String = ""
+    @State private var notificationBody: String = ""
+    
+    @State private var pushToListening = false
+    
+    private let db = Firestore.firestore()
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Before You Begin").font(.headline)
+            
+            VStack(alignment: .leading, spacing: 10) {
+                ChecklistRow(isOn: $allowNotifications,
+                             title: "Allow Notifications",
+                             subtitle: "Settings → Notifications → Allow for this app.")
+                ChecklistRow(isOn: $disableAutoLock,
+                             title: "Disable Auto-Lock (Temporarily)",
+                             subtitle: "Settings → Display & Brightness → Auto-Lock → longer while testing.")
+                ChecklistRow(isOn: $keepPluggedIn,
+                             title: "Keep Device Plugged In",
+                             subtitle: "Recommended for long-running monitoring.")
+                ChecklistRow(isOn: $placeFirmly,
+                             title: "Place Phone Firmly on Surface",
+                             subtitle: "E.g., on a dryer, machine, vehicle, workbench, shelf, or floor.")
+            }
+            .padding(12)
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Customize This Sensor").font(.headline)
+                
+                TextField("What are you monitoring? (e.g. Dryer, Generator, Workbench)",
+                          text: $useCaseName)
+                    .textFieldStyle(.roundedBorder)
+                
+                TextField("Notification title (e.g. \"Vibration event\")",
+                          text: $notificationTitle)
+                    .textFieldStyle(.roundedBorder)
+                
+                TextField("Notification body (e.g. \"Vibration spike detected on the dryer.\")",
+                          text: $notificationBody)
+                    .textFieldStyle(.roundedBorder)
+            }
+            
+            // Optional presets to help users, but they can still create anything.
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Quick Ideas (optional)")
+                    .font(.subheadline.weight(.semibold))
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        Button {
+                            applyFootstepsPreset()
+                        } label: {
+                            Text("Footsteps near hallway")
+                                .font(.caption)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(.ultraThinMaterial)
+                                .clipShape(Capsule())
+                        }
+                        
+                        Button {
+                            applyMachinePreset()
+                        } label: {
+                            Text("Washer / dryer running")
+                                .font(.caption)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(.ultraThinMaterial)
+                                .clipShape(Capsule())
+                        }
+                    }
+                }
+            }
+            
+            Button {
+                saveConfig()
+                pushToListening = true
+            } label: {
+                Label("Start Vibration Sensor", systemImage: "waveform.path.ecg")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(!allRequiredChecks)
+            .animation(.easeInOut, value: allRequiredChecks)
+            
+            NavigationLink(isActive: $pushToListening) {
+                let config = VibrationSensorConfig(
+                    useCaseName: useCaseName.isEmpty ? "Vibration Sensor" : useCaseName,
+                    notificationTitle: notificationTitle.isEmpty ? "Vibration sensor triggered" : notificationTitle,
+                    notificationBody: notificationBody.isEmpty ? "A vibration spike was detected by your sensor." : notificationBody
+                )
+                VibrationListeningView(config: config)
+            } label: {
+                EmptyView()
+            }
+            .hidden()
+        }
+        .onAppear {
+            loadConfig()
+        }
+    }
+    
+    private var allRequiredChecks: Bool {
+        allowNotifications && disableAutoLock && keepPluggedIn && placeFirmly
+    }
+    
+    private func loadConfig() {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        db.collection("users").document(uid)
+            .collection("functions").document(functionTitle)
+            .getDocument { snap, _ in
+                guard let data = snap?.data() else { return }
+                useCaseName = data["useCaseName"] as? String ?? useCaseName
+                notificationTitle = data["notificationTitle"] as? String ?? notificationTitle
+                notificationBody = data["notificationBody"] as? String ?? notificationBody
+            }
+    }
+    
+    private func saveConfig() {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        let payload: [String: Any] = [
+            "useCaseName": useCaseName,
+            "notificationTitle": notificationTitle,
+            "notificationBody": notificationBody,
+            "updatedAt": FieldValue.serverTimestamp()
+        ]
+        db.collection("users").document(uid)
+            .collection("functions").document(functionTitle)
+            .setData(payload, merge: true)
+    }
+    
+    private func applyFootstepsPreset() {
+        if useCaseName.isEmpty {
+            useCaseName = "Footstep sensor"
+        }
+        if notificationTitle.isEmpty {
+            notificationTitle = "Footsteps detected"
+        }
+        if notificationBody.isEmpty {
+            notificationBody = "We detected vibration consistent with footsteps near this device."
+        }
+    }
+    
+    private func applyMachinePreset() {
+        if useCaseName.isEmpty {
+            useCaseName = "Washer / dryer monitor"
+        }
+        if notificationTitle.isEmpty {
+            notificationTitle = "Machine vibration event"
+        }
+        if notificationBody.isEmpty {
+            notificationBody = "Vibration changed on the washer/dryer."
+        }
+    }
+}
+
  struct VibrationListeningView: View {
  let config: VibrationSensorConfig
  
@@ -1441,131 +2186,186 @@
  }
  }
  
- struct SoundSensorSetupView: View {
- let functionTitle: String
- 
- @State private var allowNotifications = false
- @State private var disableAutoLock = false
- @State private var keepPluggedIn = false
- @State private var placeNearSource = false
- 
- @State private var useCaseName: String = ""
- @State private var notificationTitle: String = ""
- @State private var notificationBody: String = ""
- @State private var thresholdString: String = "0.7"
- 
- @State private var pushToListening = false
- 
- private let db = Firestore.firestore()
- 
- var body: some View {
- VStack(alignment: .leading, spacing: 16) {
- Text("Before You Begin").font(.headline)
- 
- VStack(alignment: .leading, spacing: 10) {
- ChecklistRow(isOn: $allowNotifications,
- title: "Allow Notifications",
- subtitle: "Settings → Notifications → Allow for this app.")
- ChecklistRow(isOn: $disableAutoLock,
- title: "Disable Auto-Lock (Temporarily)",
- subtitle: "Settings → Display & Brightness → Auto-Lock → longer while testing.")
- ChecklistRow(isOn: $keepPluggedIn,
- title: "Keep Device Plugged In",
- subtitle: "Recommended for long-running sound monitoring.")
- ChecklistRow(isOn: $placeNearSource,
- title: "Place Phone Near Sound Source",
- subtitle: "E.g., near a door, pet area, machine, or alarm.")
- }
- .padding(12)
- .background(.ultraThinMaterial)
- .clipShape(RoundedRectangle(cornerRadius: 12))
- 
- VStack(alignment: .leading, spacing: 8) {
- Text("Customize This Sensor").font(.headline)
- 
- TextField("What are you monitoring? (e.g. Knocks, Barks, Alarm)",
- text: $useCaseName)
- .textFieldStyle(.roundedBorder)
- 
- TextField("Notification title (e.g. \"Sound event\")",
- text: $notificationTitle)
- .textFieldStyle(.roundedBorder)
- 
- TextField("Notification body (e.g. \"Loud sound detected at back door.\")",
- text: $notificationBody)
- .textFieldStyle(.roundedBorder)
- 
- TextField("Trigger threshold (0.0–1.0, default 0.7)",
- text: $thresholdString)
- .keyboardType(.decimalPad)
- .textFieldStyle(.roundedBorder)
- }
- 
- Button {
- saveConfig()
- pushToListening = true
- } label: {
- Label("Start Sound Sensor", systemImage: "ear.badge.waveform")
- .frame(maxWidth: .infinity)
- }
- .buttonStyle(.borderedProminent)
- .disabled(!allRequiredChecks)
- .animation(.easeInOut, value: allRequiredChecks)
- 
- NavigationLink(isActive: $pushToListening) {
- let t = Float(thresholdString) ?? 0.7
- let config = SoundSensorConfig(
- useCaseName: useCaseName.isEmpty ? "Sound Sensor" : useCaseName,
- notificationTitle: notificationTitle.isEmpty ? "Sound sensor triggered" : notificationTitle,
- notificationBody: notificationBody.isEmpty ? "A loud sound was detected by your sensor." : notificationBody,
- threshold: max(0.1, min(1.0, t))
- )
- SoundListeningView(config: config)
- } label: {
- EmptyView()
- }
- .hidden()
- }
- .onAppear {
- loadConfig()
- }
- }
- 
- private var allRequiredChecks: Bool {
- allowNotifications && disableAutoLock && keepPluggedIn && placeNearSource
- }
- 
- private func loadConfig() {
- guard let uid = Auth.auth().currentUser?.uid else { return }
- db.collection("users").document(uid)
- .collection("functions").document(functionTitle)
- .getDocument { snap, _ in
- guard let data = snap?.data() else { return }
- useCaseName = data["useCaseName"] as? String ?? useCaseName
- notificationTitle = data["notificationTitle"] as? String ?? notificationTitle
- notificationBody = data["notificationBody"] as? String ?? notificationBody
- if let t = data["threshold"] as? Double {
- thresholdString = String(format: "%.2f", t)
- }
- }
- }
- 
- private func saveConfig() {
- guard let uid = Auth.auth().currentUser?.uid else { return }
- let t = Double(thresholdString) ?? 0.7
- let payload: [String: Any] = [
- "useCaseName": useCaseName,
- "notificationTitle": notificationTitle,
- "notificationBody": notificationBody,
- "threshold": max(0.1, min(1.0, t)),
- "updatedAt": FieldValue.serverTimestamp()
- ]
- db.collection("users").document(uid)
- .collection("functions").document(functionTitle)
- .setData(payload, merge: true)
- }
- }
- 
+struct SoundSensorSetupView: View {
+    let functionTitle: String
+    
+    @State private var allowNotifications = false
+    @State private var disableAutoLock = false
+    @State private var keepPluggedIn = false
+    @State private var placeNearSource = false
+    
+    @State private var useCaseName: String = ""
+    @State private var notificationTitle: String = ""
+    @State private var notificationBody: String = ""
+    @State private var thresholdString: String = "0.7"
+    
+    @State private var pushToListening = false
+    
+    private let db = Firestore.firestore()
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Before You Begin").font(.headline)
+            
+            VStack(alignment: .leading, spacing: 10) {
+                ChecklistRow(isOn: $allowNotifications,
+                             title: "Allow Notifications",
+                             subtitle: "Settings → Notifications → Allow for this app.")
+                ChecklistRow(isOn: $disableAutoLock,
+                             title: "Disable Auto-Lock (Temporarily)",
+                             subtitle: "Settings → Display & Brightness → Auto-Lock → longer while testing.")
+                ChecklistRow(isOn: $keepPluggedIn,
+                             title: "Keep Device Plugged In",
+                             subtitle: "Recommended for long-running sound monitoring.")
+                ChecklistRow(isOn: $placeNearSource,
+                             title: "Place Phone Near Sound Source",
+                             subtitle: "E.g., near a door, pet area, machine, or alarm.")
+            }
+            .padding(12)
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Customize This Sensor").font(.headline)
+                
+                TextField("What are you monitoring? (e.g. Knocks, Barks, Alarm)",
+                          text: $useCaseName)
+                    .textFieldStyle(.roundedBorder)
+                
+                TextField("Notification title (e.g. \"Sound event\")",
+                          text: $notificationTitle)
+                    .textFieldStyle(.roundedBorder)
+                
+                TextField("Notification body (e.g. \"Loud sound detected at back door.\")",
+                          text: $notificationBody)
+                    .textFieldStyle(.roundedBorder)
+                
+                TextField("Trigger threshold (0.0–1.0, default 0.7)",
+                          text: $thresholdString)
+                    .keyboardType(.decimalPad)
+                    .textFieldStyle(.roundedBorder)
+            }
+            
+            // Optional presets to help users, but they can still create anything.
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Quick Ideas (optional)")
+                    .font(.subheadline.weight(.semibold))
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        Button {
+                            applyDogBarkPreset()
+                        } label: {
+                            Text("Dog bark near door")
+                                .font(.caption)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(.ultraThinMaterial)
+                                .clipShape(Capsule())
+                        }
+                        
+                        Button {
+                            applyKnockPreset()
+                        } label: {
+                            Text("Knock at front door")
+                                .font(.caption)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(.ultraThinMaterial)
+                                .clipShape(Capsule())
+                        }
+                    }
+                }
+            }
+            
+            Button {
+                saveConfig()
+                pushToListening = true
+            } label: {
+                Label("Start Sound Sensor", systemImage: "ear.badge.waveform")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(!allRequiredChecks)
+            .animation(.easeInOut, value: allRequiredChecks)
+            
+            NavigationLink(isActive: $pushToListening) {
+                let t = Float(thresholdString) ?? 0.7
+                let config = SoundSensorConfig(
+                    useCaseName: useCaseName.isEmpty ? "Sound Sensor" : useCaseName,
+                    notificationTitle: notificationTitle.isEmpty ? "Sound sensor triggered" : notificationTitle,
+                    notificationBody: notificationBody.isEmpty ? "A loud sound was detected by your sensor." : notificationBody,
+                    threshold: max(0.1, min(1.0, t))
+                )
+                SoundListeningView(config: config)
+            } label: {
+                EmptyView()
+            }
+            .hidden()
+        }
+        .onAppear {
+            loadConfig()
+        }
+    }
+    
+    private var allRequiredChecks: Bool {
+        allowNotifications && disableAutoLock && keepPluggedIn && placeNearSource
+    }
+    
+    private func loadConfig() {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        db.collection("users").document(uid)
+            .collection("functions").document(functionTitle)
+            .getDocument { snap, _ in
+                guard let data = snap?.data() else { return }
+                useCaseName = data["useCaseName"] as? String ?? useCaseName
+                notificationTitle = data["notificationTitle"] as? String ?? notificationTitle
+                notificationBody = data["notificationBody"] as? String ?? notificationBody
+                if let t = data["threshold"] as? Double {
+                    thresholdString = String(format: "%.2f", t)
+                }
+            }
+    }
+    
+    private func saveConfig() {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        let t = Double(thresholdString) ?? 0.7
+        let payload: [String: Any] = [
+            "useCaseName": useCaseName,
+            "notificationTitle": notificationTitle,
+            "notificationBody": notificationBody,
+            "threshold": max(0.1, min(1.0, t)),
+            "updatedAt": FieldValue.serverTimestamp()
+        ]
+        db.collection("users").document(uid)
+            .collection("functions").document(functionTitle)
+            .setData(payload, merge: true)
+    }
+    
+    private func applyDogBarkPreset() {
+        if useCaseName.isEmpty {
+            useCaseName = "Dog bark monitor"
+        }
+        if notificationTitle.isEmpty {
+            notificationTitle = "Dog bark detected"
+        }
+        if notificationBody.isEmpty {
+            notificationBody = "We heard a loud bark near this device."
+        }
+    }
+    
+    private func applyKnockPreset() {
+        if useCaseName.isEmpty {
+            useCaseName = "Knock / door sound"
+        }
+        if notificationTitle.isEmpty {
+            notificationTitle = "Knock detected"
+        }
+        if notificationBody.isEmpty {
+            notificationBody = "We detected a loud knock or door sound near this device."
+        }
+    }
+}
+
  struct SoundListeningView: View {
  let config: SoundSensorConfig
  
@@ -1972,7 +2772,7 @@
  isListening = listening
  postHeartbeat(task: task)
  }
- 
+ /*
  private func postHeartbeat(task: String? = nil) {
  guard !userUID.isEmpty, !deviceID.isEmpty else { return }
  let db = Firestore.firestore()
@@ -1998,6 +2798,46 @@
  .collection("devices").document(deviceID)
  .setData(payload, merge: true)
  }
+                     */
+     private func postHeartbeat(task: String? = nil) {
+         guard !userUID.isEmpty, !deviceID.isEmpty else { return }
+         let db = Firestore.firestore()
+         
+         let level = UIDevice.current.batteryLevel
+         let batteryPct = level < 0 ? nil : Int((max(0, min(1, level)) * 100).rounded())
+         
+         var payload: [String: Any] = [
+             "isActive": true,
+             "updatedAt": FieldValue.serverTimestamp(),
+             "isListening": isListening
+         ]
+         
+         if let pct = batteryPct { payload["battery"] = pct }
+         if let task = task { payload["task"] = task }
+         
+         let state = UIDevice.current.batteryState
+         let batteryState: String
+         switch state {
+         case .charging:  batteryState = "charging"
+         case .full:      batteryState = "full"
+         case .unplugged: batteryState = "unplugged"
+         case .unknown:   fallthrough
+         @unknown default: batteryState = "unknown"
+         }
+         
+         payload["batteryState"] = batteryState
+         payload["isPluggedIn"] = (state == .charging || state == .full)
+         payload["lowPowerMode"] = ProcessInfo.processInfo.isLowPowerModeEnabled
+         
+         payload["model"] = UIDevice.current.model
+         payload["name"] = UIDevice.current.name
+         payload["bundleID"] = Bundle.main.bundleIdentifier ?? ""
+         payload["systemVersion"] = UIDevice.current.systemVersion
+         
+         db.collection("users").document(userUID)
+             .collection("devices").document(deviceID)
+             .setData(payload, merge: true)
+     }
  }
  
  // MARK: - Small UI Helpers
@@ -2039,6 +2879,7 @@
  .padding(.vertical, 4)
  .background(.ultraThinMaterial)
  .clipShape(Capsule())
- }
- }
+ } }
  
+
+
