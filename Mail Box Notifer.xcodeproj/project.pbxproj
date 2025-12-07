@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		5E02A7382EE4D35600F527FB /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 5E02A7372EE4D35600F527FB /* FirebaseStorage */; };
 		5E212F3E2EC14EDF00EF5D90 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 5E212F3D2EC14EDF00EF5D90 /* GoogleService-Info.plist */; };
 		FA645DAC2E3055F30090956D /* Mail_Box_NotiferApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA645DAB2E3055F30090956D /* Mail_Box_NotiferApp.swift */; };
 		FA645DAE2E3055F30090956D /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA645DAD2E3055F30090956D /* ContentView.swift */; };
@@ -61,6 +62,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				FA645DDB2E3057E30090956D /* FirebaseMessaging in Frameworks */,
+				5E02A7382EE4D35600F527FB /* FirebaseStorage in Frameworks */,
 				FA645DD72E3057E30090956D /* FirebaseAuth in Frameworks */,
 				FA645DD92E3057E30090956D /* FirebaseFirestore in Frameworks */,
 			);
@@ -83,6 +85,13 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		5E02A7362EE4D35600F527FB /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		FA645D9F2E3055F30090956D = {
 			isa = PBXGroup;
 			children = (
@@ -90,6 +99,7 @@
 				FA645DAA2E3055F30090956D /* Mail Box Notifer */,
 				FA645DBB2E3055F50090956D /* Mail Box NotiferTests */,
 				FA645DC52E3055F60090956D /* Mail Box NotiferUITests */,
+				5E02A7362EE4D35600F527FB /* Frameworks */,
 				FA645DA92E3055F30090956D /* Products */,
 			);
 			sourceTree = "<group>";
@@ -163,6 +173,7 @@
 				FA645DD62E3057E30090956D /* FirebaseAuth */,
 				FA645DD82E3057E30090956D /* FirebaseFirestore */,
 				FA645DDA2E3057E30090956D /* FirebaseMessaging */,
+				5E02A7372EE4D35600F527FB /* FirebaseStorage */,
 			);
 			productName = "Mail Box Notifer";
 			productReference = FA645DA82E3055F30090956D /* Mail Box Notifer.app */;
@@ -448,6 +459,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Mail-Box-Notifer-Info.plist";
+				INFOPLIST_KEY_NSCameraUsageDescription = "The camera is used for the \"Camera\" feature to turn your device into a security Camera.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "We use the microphone to detect vibration and sound events on your device so it can notify you when mail or other activity is detected.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -485,6 +497,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Mail-Box-Notifer-Info.plist";
+				INFOPLIST_KEY_NSCameraUsageDescription = "The camera is used for the \"Camera\" feature to turn your device into a security Camera.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "We use the microphone to detect vibration and sound events on your device so it can notify you when mail or other activity is detected.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -644,6 +657,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		5E02A7372EE4D35600F527FB /* FirebaseStorage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FA645DD52E3057E30090956D /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseStorage;
+		};
 		FA645DD62E3057E30090956D /* FirebaseAuth */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = FA645DD52E3057E30090956D /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
