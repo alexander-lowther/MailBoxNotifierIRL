@@ -8,7 +8,21 @@
 
 /* Begin PBXBuildFile section */
 		5E02A7382EE4D35600F527FB /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 5E02A7372EE4D35600F527FB /* FirebaseStorage */; };
+		5E129B0B2F21AC4400509148 /* HomeTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E129B0A2F21AC3A00509148 /* HomeTab.swift */; };
+		5E129B0D2F21ACA100509148 /* AppUI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E129B0C2F21AC9D00509148 /* AppUI.swift */; };
+		5E129B0F2F21AEE800509148 /* TasksTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E129B0E2F21AEDF00509148 /* TasksTab.swift */; };
+		5E129B112F21AFD600509148 /* DevicesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E129B102F21AFCB00509148 /* DevicesView.swift */; };
+		5E129B132F21AFE800509148 /* MeTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E129B122F21AFE100509148 /* MeTab.swift */; };
+		5E129B152F21B07E00509148 /* MoreTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E129B142F21B07900509148 /* MoreTab.swift */; };
+		5E129B192F21BBEB00509148 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E129B182F21BBDC00509148 /* NotificationService.swift */; };
+		5E129B1B2F21BC4900509148 /* TaskDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E129B1A2F21BC4200509148 /* TaskDetailView.swift */; };
 		5E212F3E2EC14EDF00EF5D90 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 5E212F3D2EC14EDF00EF5D90 /* GoogleService-Info.plist */; };
+		5E6250702F298A5D0070C94B /* LevelTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E62506F2F298A560070C94B /* LevelTask.swift */; };
+		5E6250722F29A3270070C94B /* LightChangeTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E6250712F29A31B0070C94B /* LightChangeTask.swift */; };
+		5EB35EFD2F2420630002AC93 /* VibeTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EB35EFC2F24205E0002AC93 /* VibeTask.swift */; };
+		5EB35EFF2F2420CD0002AC93 /* PowerTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EB35EFE2F2420C70002AC93 /* PowerTask.swift */; };
+		5EB35F012F2429040002AC93 /* FirebaseFunctions in Frameworks */ = {isa = PBXBuildFile; productRef = 5EB35F002F2429040002AC93 /* FirebaseFunctions */; };
+		5EE514282F1F32EE00BC8C80 /* SoundTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EE514262F1F32EE00BC8C80 /* SoundTask.swift */; };
 		FA645DAC2E3055F30090956D /* Mail_Box_NotiferApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA645DAB2E3055F30090956D /* Mail_Box_NotiferApp.swift */; };
 		FA645DAE2E3055F30090956D /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA645DAD2E3055F30090956D /* ContentView.swift */; };
 		FA645DB02E3055F50090956D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = FA645DAF2E3055F50090956D /* Assets.xcassets */; };
@@ -40,7 +54,20 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		5E129B0A2F21AC3A00509148 /* HomeTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeTab.swift; sourceTree = "<group>"; };
+		5E129B0C2F21AC9D00509148 /* AppUI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppUI.swift; sourceTree = "<group>"; };
+		5E129B0E2F21AEDF00509148 /* TasksTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksTab.swift; sourceTree = "<group>"; };
+		5E129B102F21AFCB00509148 /* DevicesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevicesView.swift; sourceTree = "<group>"; };
+		5E129B122F21AFE100509148 /* MeTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeTab.swift; sourceTree = "<group>"; };
+		5E129B142F21B07900509148 /* MoreTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoreTab.swift; sourceTree = "<group>"; };
+		5E129B182F21BBDC00509148 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
+		5E129B1A2F21BC4200509148 /* TaskDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskDetailView.swift; sourceTree = "<group>"; };
 		5E212F3D2EC14EDF00EF5D90 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		5E62506F2F298A560070C94B /* LevelTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LevelTask.swift; sourceTree = "<group>"; };
+		5E6250712F29A31B0070C94B /* LightChangeTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LightChangeTask.swift; sourceTree = "<group>"; };
+		5EB35EFC2F24205E0002AC93 /* VibeTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VibeTask.swift; sourceTree = "<group>"; };
+		5EB35EFE2F2420C70002AC93 /* PowerTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PowerTask.swift; sourceTree = "<group>"; };
+		5EE514262F1F32EE00BC8C80 /* SoundTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundTask.swift; sourceTree = "<group>"; };
 		FA40CD192E306B1700A9E809 /* Mail Box Notifer.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Mail Box Notifer.entitlements"; sourceTree = "<group>"; };
 		FA645DA82E3055F30090956D /* Mail Box Notifer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Mail Box Notifer.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		FA645DAB2E3055F30090956D /* Mail_Box_NotiferApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Mail_Box_NotiferApp.swift; sourceTree = "<group>"; };
@@ -63,6 +90,7 @@
 			files = (
 				FA645DDB2E3057E30090956D /* FirebaseMessaging in Frameworks */,
 				5E02A7382EE4D35600F527FB /* FirebaseStorage in Frameworks */,
+				5EB35F012F2429040002AC93 /* FirebaseFunctions in Frameworks */,
 				FA645DD72E3057E30090956D /* FirebaseAuth in Frameworks */,
 				FA645DD92E3057E30090956D /* FirebaseFirestore in Frameworks */,
 			);
@@ -117,10 +145,23 @@
 		FA645DAA2E3055F30090956D /* Mail Box Notifer */ = {
 			isa = PBXGroup;
 			children = (
+				5E6250712F29A31B0070C94B /* LightChangeTask.swift */,
+				5E62506F2F298A560070C94B /* LevelTask.swift */,
+				5EB35EFE2F2420C70002AC93 /* PowerTask.swift */,
+				5EB35EFC2F24205E0002AC93 /* VibeTask.swift */,
+				5E129B1A2F21BC4200509148 /* TaskDetailView.swift */,
+				5E129B182F21BBDC00509148 /* NotificationService.swift */,
+				5E129B122F21AFE100509148 /* MeTab.swift */,
+				5E129B0E2F21AEDF00509148 /* TasksTab.swift */,
+				5E129B0C2F21AC9D00509148 /* AppUI.swift */,
+				5E129B0A2F21AC3A00509148 /* HomeTab.swift */,
 				FACC462D2E3071AD005A3704 /* Mail-Box-Notifer-Info.plist */,
+				5EE514262F1F32EE00BC8C80 /* SoundTask.swift */,
 				FA40CD192E306B1700A9E809 /* Mail Box Notifer.entitlements */,
 				FA645DAB2E3055F30090956D /* Mail_Box_NotiferApp.swift */,
 				FA645DAD2E3055F30090956D /* ContentView.swift */,
+				5E129B102F21AFCB00509148 /* DevicesView.swift */,
+				5E129B142F21B07900509148 /* MoreTab.swift */,
 				FA645DAF2E3055F50090956D /* Assets.xcassets */,
 				FA645DB12E3055F50090956D /* Preview Content */,
 				FACC462E2E3076A3005A3704 /* AppDelegate.swift */,
@@ -174,6 +215,7 @@
 				FA645DD82E3057E30090956D /* FirebaseFirestore */,
 				FA645DDA2E3057E30090956D /* FirebaseMessaging */,
 				5E02A7372EE4D35600F527FB /* FirebaseStorage */,
+				5EB35F002F2429040002AC93 /* FirebaseFunctions */,
 			);
 			productName = "Mail Box Notifer";
 			productReference = FA645DA82E3055F30090956D /* Mail Box Notifer.app */;
@@ -294,8 +336,21 @@
 			buildActionMask = 2147483647;
 			files = (
 				FACC462F2E3076A4005A3704 /* AppDelegate.swift in Sources */,
+				5E6250722F29A3270070C94B /* LightChangeTask.swift in Sources */,
+				5E129B192F21BBEB00509148 /* NotificationService.swift in Sources */,
+				5E129B0D2F21ACA100509148 /* AppUI.swift in Sources */,
+				5E129B112F21AFD600509148 /* DevicesView.swift in Sources */,
+				5EB35EFF2F2420CD0002AC93 /* PowerTask.swift in Sources */,
 				FA645DAE2E3055F30090956D /* ContentView.swift in Sources */,
+				5E129B0F2F21AEE800509148 /* TasksTab.swift in Sources */,
 				FA645DAC2E3055F30090956D /* Mail_Box_NotiferApp.swift in Sources */,
+				5E6250702F298A5D0070C94B /* LevelTask.swift in Sources */,
+				5E129B152F21B07E00509148 /* MoreTab.swift in Sources */,
+				5E129B1B2F21BC4900509148 /* TaskDetailView.swift in Sources */,
+				5E129B0B2F21AC4400509148 /* HomeTab.swift in Sources */,
+				5EB35EFD2F2420630002AC93 /* VibeTask.swift in Sources */,
+				5E129B132F21AFE800509148 /* MeTab.swift in Sources */,
+				5EE514282F1F32EE00BC8C80 /* SoundTask.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -453,12 +508,13 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "Mail Box Notifer/Mail Box Notifer.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 34;
+				CURRENT_PROJECT_VERSION = 92;
 				DEVELOPMENT_ASSET_PATHS = "\"Mail Box Notifer/Preview Content\"";
 				DEVELOPMENT_TEAM = ZL6287AT9V;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Mail-Box-Notifer-Info.plist";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSCameraUsageDescription = "The camera is used for the \"Camera\" feature to turn your device into a security Camera.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "We use the microphone to detect vibration and sound events on your device so it can notify you when mail or other activity is detected.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -491,12 +547,13 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "Mail Box Notifer/Mail Box Notifer.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 34;
+				CURRENT_PROJECT_VERSION = 92;
 				DEVELOPMENT_ASSET_PATHS = "\"Mail Box Notifer/Preview Content\"";
 				DEVELOPMENT_TEAM = ZL6287AT9V;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Mail-Box-Notifer-Info.plist";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSCameraUsageDescription = "The camera is used for the \"Camera\" feature to turn your device into a security Camera.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "We use the microphone to detect vibration and sound events on your device so it can notify you when mail or other activity is detected.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -573,7 +630,7 @@
 				DEVELOPMENT_TEAM = ZL6287AT9V;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "We use the microphone to detect vibration and sound events on your device so it can notify you when mail or other activity is detected.";
-				IPHONEOS_DEPLOYMENT_TARGET = 16.;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "Notify.Mail-Box-NotiferUITests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -593,7 +650,7 @@
 				DEVELOPMENT_TEAM = ZL6287AT9V;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "We use the microphone to detect vibration and sound events on your device so it can notify you when mail or other activity is detected.";
-				IPHONEOS_DEPLOYMENT_TARGET = 16.;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "Notify.Mail-Box-NotiferUITests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -661,6 +718,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = FA645DD52E3057E30090956D /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseStorage;
+		};
+		5EB35F002F2429040002AC93 /* FirebaseFunctions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FA645DD52E3057E30090956D /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFunctions;
 		};
 		FA645DD62E3057E30090956D /* FirebaseAuth */ = {
 			isa = XCSwiftPackageProductDependency;
