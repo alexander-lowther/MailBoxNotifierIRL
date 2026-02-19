@@ -22,7 +22,7 @@ import UIKit
 
 struct PowerLossSetupView: View {
     let functionTitle: String  // kept for compatibility with your existing routing
-
+    let deviceID: String   
     @State private var createdTaskId: String = ""
     @State private var pushToListening: Bool = false
 
@@ -89,21 +89,15 @@ struct PowerLossSetupView: View {
         db.collection("_tmp").document().documentID
     }
 
-    private func stableDeviceID() -> String {
-        if let existing = UserDefaults.standard.string(forKey: "stable_device_id"), !existing.isEmpty {
-            return existing
-        }
-        let newID = UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
-        UserDefaults.standard.set(newID, forKey: "stable_device_id")
-        return newID
-    }
+  
 
     /// Single Firestore write that sets startedAt + endedAt(null) + listenerDevice in one call.
     /// NOTE: This does NOT block navigation.
     private func createTaskOneWrite(taskId: String) {
         guard let uid = Auth.auth().currentUser?.uid, !uid.isEmpty else { return }
 
-        let deviceID = stableDeviceID()
+
+
 
         let cachedName = UserDefaults.standard.string(forKey: "local_device_name")
         let fallbackName = UIDevice.current.name
@@ -124,7 +118,7 @@ struct PowerLossSetupView: View {
             "endedAt": NSNull(),
 
             "deviceName": deviceName,
-            "listenerDeviceID": deviceID,
+         
 
             "sendNotifications": true,
             "notificationTitlePowerOff": "Power Off",
@@ -233,7 +227,7 @@ struct PowerLossListeningView: View {
                 didSendStartedPush = true
                 NotificationService.shared.sendPush(
                     subject: "Listening started",
-                    body: "User started listening to Power Loss.",
+                    body: "Power Task has started",
                     taskId: taskId,
                     eventType: "listening_started",
                     sourceDeviceID: nil
@@ -323,7 +317,7 @@ struct PowerLossListeningView: View {
 
         var payload: [String: Any] = [
             "endedAt": Timestamp(date: Date()),
-            "endedReason": "user_stopped"
+            "endedBy": "user_stopped"
         ]
 
         payload["samples"] = samples.map { ["t": Timestamp(date: $0.time), "v": $0.value] }

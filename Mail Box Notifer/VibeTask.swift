@@ -27,7 +27,7 @@ import UIKit
 
 struct VibeSensorSetupView: View {
     let functionTitle: String  // kept for compatibility with your existing routing
-
+    let deviceID: String
     @State private var notificationTitle: String = ""
     @State private var notificationBody: String = ""
     @State private var sendNotifications: Bool = true
@@ -143,19 +143,11 @@ struct VibeSensorSetupView: View {
         db.collection("_tmp").document().documentID
     }
 
-    private func stableDeviceID() -> String {
-        if let existing = UserDefaults.standard.string(forKey: "stable_device_id"), !existing.isEmpty {
-            return existing
-        }
-        let newID = UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
-        UserDefaults.standard.set(newID, forKey: "stable_device_id")
-        return newID
-    }
-
+  
     private func createTaskOneWrite(taskId: String) {
         guard let uid = Auth.auth().currentUser?.uid, !uid.isEmpty else { return }
 
-        let deviceID = stableDeviceID()
+
 
         let cachedName = UserDefaults.standard.string(forKey: "local_device_name")
         let fallbackName = UIDevice.current.name
@@ -175,7 +167,7 @@ struct VibeSensorSetupView: View {
             "endedAt": NSNull(),
 
             "deviceName": deviceName,
-            "listenerDeviceID": deviceID,
+         
 
             // Keep schema stable for future notifications
             "notificationTitle": effectiveNotificationTitle(),
@@ -363,7 +355,7 @@ struct VibeListeningView: View {
 
         var payload: [String: Any] = [
             "endedAt": Timestamp(date: Date()),
-            "endedReason": "user_stopped"
+            "endedBy": "user_stopped"
         ]
 
         payload["samples"] = samples.map { ["t": Timestamp(date: $0.time), "v": $0.value] }
@@ -472,10 +464,8 @@ struct VibeWaveView: View {
 }
 
 
-// MARK: - Monitor
-
 final class VibrationMonitor: ObservableObject {
-    @Published var level: Double = 0.0     // 0..1 normalized
+    @Published var level: Double = 0.0     // 0..1 normalized RMS energy
     @Published var isVibrating: Bool = false
 
     var stateText: String { isVibrating ? "Vibrating" : "Still" }
@@ -489,34 +479,80 @@ final class VibrationMonitor: ObservableObject {
     private let manager = CMMotionManager()
     private let queue = OperationQueue()
 
-    // Internal tuning (not user-facing)
+    // MARK: - Internal tuning (not user-facing)
+
+    /// RMS thresholds (hysteresis)
     private let startThreshold: Double = 0.10
     private let stopThreshold: Double  = 0.06
-    private let debounceSeconds: TimeInterval = 2.0
+
+    /// How long RMS must stay above/below threshold to confirm a state change
+    private let startHold: TimeInterval = 0.8
+    private let stopHold: TimeInterval  = 2.0
+
+    /// Rolling window for RMS calculation
+    private let windowSeconds: TimeInterval = 2.0
+    private let updateHz: Double = 50.0
+
+    /// Initial warmup before we decide the starting state (handles “dryer already running”)
+    private let warmupSeconds: TimeInterval = 1.0
+
+    // MARK: - State
 
     private var lastTransitionAt: Date = .distantPast
     private var pendingTransition: Transition? = nil
 
+    private var samples: [Double] = []
+    private var maxSamples: Int { max(10, Int(windowSeconds * updateHz)) }
+
+    private var aboveSince: Date? = nil
+    private var belowSince: Date? = nil
+
+    private var startedAt: Date? = nil
+    private var didInitializeState: Bool = false
+
     func start() {
         guard manager.isAccelerometerAvailable else { return }
-        manager.accelerometerUpdateInterval = 1.0 / 50.0
 
+        manager.accelerometerUpdateInterval = 1.0 / updateHz
         queue.qualityOfService = .userInitiated
+
+        // Reset session state
+        DispatchQueue.main.async {
+            self.level = 0
+            self.isVibrating = false
+        }
+        samples.removeAll(keepingCapacity: true)
+        aboveSince = nil
+        belowSince = nil
+        pendingTransition = nil
+        lastTransitionAt = .distantPast
+        startedAt = Date()
+        didInitializeState = false
 
         manager.startAccelerometerUpdates(to: queue) { [weak self] data, _ in
             guard let self, let a = data?.acceleration else { return }
 
-            // Magnitude includes gravity; subtract ~1g to focus on movement/vibration.
+            // Magnitude includes gravity; subtract ~1g to focus on vibration/movement.
             let mag = sqrt(a.x * a.x + a.y * a.y + a.z * a.z)
             let movement = abs(mag - 1.0)
 
-            // Normalize into 0..1 for UI
-            let normalized = min(1.0, max(0.0, movement * 4.0))
+            // Convert raw movement to a normalized-ish energy sample
+            let scaled = min(1.0, max(0.0, movement * 4.0))
 
             DispatchQueue.main.async {
-                // simple smoothing
-                self.level = (self.level * 0.85) + (normalized * 0.15)
-                self.evaluateState(now: Date())
+                let now = Date()
+
+                // Rolling window
+                self.samples.append(scaled)
+                if self.samples.count > self.maxSamples {
+                    self.samples.removeFirst(self.samples.count - self.maxSamples)
+                }
+
+                // RMS energy over window (robust for “off” detection)
+                let rms = self.computeRMS(self.samples)
+                self.level = rms
+
+                self.evaluateState(now: now, rms: rms)
             }
         }
     }
@@ -530,19 +566,71 @@ final class VibrationMonitor: ObservableObject {
         return pendingTransition
     }
 
-    private func evaluateState(now: Date) {
-        let elapsed = now.timeIntervalSince(lastTransitionAt)
-        guard elapsed >= debounceSeconds else { return }
+    private func computeRMS(_ xs: [Double]) -> Double {
+        guard !xs.isEmpty else { return 0 }
+        var sumSq: Double = 0
+        for v in xs { sumSq += v * v }
+        return sqrt(sumSq / Double(xs.count))
+    }
 
-        if !isVibrating, level >= startThreshold {
-            isVibrating = true
-            lastTransitionAt = now
-            pendingTransition = Transition(time: now, kind: "vibration_started", level: level)
-        } else if isVibrating, level <= stopThreshold {
-            isVibrating = false
-            lastTransitionAt = now
-            pendingTransition = Transition(time: now, kind: "vibration_stopped", level: level)
+    private func evaluateState(now: Date, rms: Double) {
+        // Warmup: decide starting state once, without emitting “started”
+        if !didInitializeState {
+            if let startedAt, now.timeIntervalSince(startedAt) >= warmupSeconds, samples.count >= Int(updateHz * 0.5) {
+                didInitializeState = true
+
+                // If already above start threshold, treat as already vibrating.
+                // This satisfies “phone placed before or after dryer starts”
+                if rms >= startThreshold {
+                    isVibrating = true
+                } else {
+                    isVibrating = false
+                }
+
+                // Reset hold timers so we require sustained evidence for the next transition
+                aboveSince = nil
+                belowSince = nil
+            }
+            return
         }
+
+        // START candidate
+        if rms >= startThreshold {
+            if aboveSince == nil { aboveSince = now }
+            belowSince = nil
+
+            if !isVibrating, let since = aboveSince, now.timeIntervalSince(since) >= startHold {
+                isVibrating = true
+                lastTransitionAt = now
+                pendingTransition = Transition(time: now, kind: "vibration_started", level: rms)
+
+                // Reset to avoid repeated triggers
+                aboveSince = nil
+                belowSince = nil
+            }
+            return
+        }
+
+        // STOP candidate
+        if rms <= stopThreshold {
+            if belowSince == nil { belowSince = now }
+            aboveSince = nil
+
+            if isVibrating, let since = belowSince, now.timeIntervalSince(since) >= stopHold {
+                isVibrating = false
+                lastTransitionAt = now
+                pendingTransition = Transition(time: now, kind: "vibration_stopped", level: rms)
+
+                // Reset to avoid repeated triggers
+                aboveSince = nil
+                belowSince = nil
+            }
+            return
+        }
+
+        // In the hysteresis band: clear holds (prevents half-triggers)
+        aboveSince = nil
+        belowSince = nil
     }
 }
 

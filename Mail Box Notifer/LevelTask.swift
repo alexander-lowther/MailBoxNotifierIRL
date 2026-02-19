@@ -12,8 +12,9 @@ import UIKit
 
 struct LevelSensorSetupView: View {
     let functionTitle: String
-
-    @State private var thresholdDeg: Double = 45
+    let deviceID: String
+    
+    @State private var threshold: Double = 45
     @State private var sendNotifications: Bool = true
 
     @State private var notificationTitle: String = ""
@@ -33,7 +34,7 @@ struct LevelSensorSetupView: View {
                     bullets: [
                         ("Keep the phone stable", "Movement will rapidly change readings and may cause triggers."),
                         ("Press re-center once placed", "This zeros the current tilt so threshold is relative to placement."),
-                        ("Expect two hits", "Going 0→90 will notify once on the way up and once on the way down.")
+                        ("Tilt requires flat surface", "Phone should never slide or move in unwanted directions")
                     ]
                 )
 
@@ -42,12 +43,12 @@ struct LevelSensorSetupView: View {
                         .font(.headline)
 
                     HStack {
-                        Text("\(Int(thresholdDeg))°")
+                        Text("\(Int(threshold))°")
                             .font(.system(.title3, design: .rounded).bold())
                         Spacer()
                     }
 
-                    Slider(value: $thresholdDeg, in: 1...90, step: 1)
+                    Slider(value: $threshold, in: 1...90, step: 1)
                         .tint(.green)
 
                     Toggle("Send notifications", isOn: $sendNotifications)
@@ -100,16 +101,30 @@ struct LevelSensorSetupView: View {
                 }
                 .buttonStyle(.borderedProminent)
 
-                NavigationLink(isActive: $pushToListening) {
+            NavigationLink(isActive: $pushToListening) {
                     LevelListeningView(
-                        config: LevelSensorConfig(thresholdDeg: thresholdDeg, sendNotifications: sendNotifications),
+                        config: LevelSensorConfig(
+                            threshold: threshold,
+                            sendNotifications: sendNotifications,
+                            notificationTitle: effectiveNotificationTitle(),
+                            notificationBody: effectiveNotificationBody()
+                        ),
                         taskId: createdTaskId,
                         userUID: Auth.auth().currentUser?.uid ?? ""
                     )
+
                 } label: { EmptyView() }
                 .hidden()
             }
             .padding()
+             
+              
+              
+                
+             
+                
+                
+                
         }
         .navigationTitle(functionTitle)
         .navigationBarTitleDisplayMode(.inline)
@@ -119,29 +134,23 @@ struct LevelSensorSetupView: View {
         db.collection("_tmp").document().documentID
     }
 
-    private func stableDeviceID() -> String {
-        if let existing = UserDefaults.standard.string(forKey: "stable_device_id"), !existing.isEmpty {
-            return existing
-        }
-        let newID = UUID().uuidString
-        UserDefaults.standard.set(newID, forKey: "stable_device_id")
-        return newID
-    }
+  
     
     private func effectiveNotificationTitle() -> String {
-        // If notifications are OFF, we still store safe defaults (or blanks) consistently.
-        guard sendNotifications else { return "Sound detected" }
-        return notificationTitle.isEmpty ? "Sound detected" : notificationTitle
+        guard sendNotifications else { return "Level threshold hit" }
+        return notificationTitle.isEmpty ? "Level threshold hit" : notificationTitle
     }
 
     private func effectiveNotificationBody() -> String {
-        guard sendNotifications else { return "Your sound sensor was triggered." }
-        return notificationBody.isEmpty ? "Your sound sensor was triggered." : notificationBody
+        guard sendNotifications else { return "Your level sensor was triggered." }
+        return notificationBody.isEmpty ? "Your level sensor was triggered." : notificationBody
     }
+
     private func createTaskOneWrite(taskId: String) {
         guard let uid = Auth.auth().currentUser?.uid, !uid.isEmpty else { return }
 
-        let deviceID = stableDeviceID()
+
+
         let cachedName = UserDefaults.standard.string(forKey: "local_device_name")
         let fallbackName = UIDevice.current.name
         let deviceName = (cachedName?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)
@@ -155,12 +164,13 @@ struct LevelSensorSetupView: View {
             "type": "level",
             "deviceID": deviceID,
             "deviceName": deviceName,
-            "listenerDeviceID": deviceID,
-
+         
+            "notificationTitle": effectiveNotificationTitle(),
+            "notificationBody": effectiveNotificationBody(),
             "startedAt": Timestamp(date: Date()),
             "endedAt": NSNull(),
 
-            "thresholdDeg": thresholdDeg,
+            "threshold": threshold,
             "sendNotifications": sendNotifications
         ]
 
@@ -173,12 +183,12 @@ struct LevelSensorSetupView: View {
 }
 
 // MARK: - Config
-
 struct LevelSensorConfig: Hashable {
-    let thresholdDeg: Double
+    let threshold: Double
     let sendNotifications: Bool
+    let notificationTitle: String
+    let notificationBody: String
 }
-
 // MARK: - Listening View
 
 struct LevelListeningView: View {
@@ -221,7 +231,7 @@ struct LevelListeningView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Level Sensor")
                         .font(.title3.bold())
-                    Text("Threshold: \(Int(config.thresholdDeg))° (y)")
+                    Text("Threshold: \(Int(config.threshold))° (y)")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -247,17 +257,17 @@ struct LevelListeningView: View {
             HStack(spacing: 12) {
                 BubbleChip(label: "x", value: String(format: "%.1f°", monitor.xDeg), isActive: false)
                 Spacer(minLength: 0)
-                BubbleChip(label: "y", value: String(format: "%.1f°", monitor.yDeg), isActive: monitor.yAbs >= config.thresholdDeg)
+                BubbleChip(label: "y", value: String(format: "%.1f°", monitor.yDeg), isActive: monitor.yAbs >= config.threshold)
             }
             .padding(.horizontal)
 
             // Notifications toggle chip row (so user can verify it actually works)
             HStack {
-                BubbleToggleChip(
-                    title: "Notifications",
-                    isOn: $sendNotificationsLive
-                )
-                Spacer()
+             //   BubbleToggleChip(
+               //     title: "Notifications",
+                 //   isOn: $sendNotificationsLive
+               // )
+              //  Spacer()
             }
             .padding(.horizontal)
 
@@ -277,7 +287,7 @@ struct LevelListeningView: View {
             .padding(.bottom, 18)
         }
         .onAppear {
-            monitor.start(thresholdDeg: config.thresholdDeg)
+            monitor.start(threshold: config.threshold)
             status = "listening…"
             if sendNotificationsLive { requestNotificationPermissionIfNeeded() }
             startSampling()
@@ -291,7 +301,26 @@ struct LevelListeningView: View {
     }
 
     // MARK: - Sampling + HIT triggers
+    private func maybeNotify(direction: LevelMotionMonitor.HitKind, yAbs: Double) {
+        guard sendNotificationsLive else { return }
 
+        // Optional: tighter cooldown to prevent spam on oscillation
+        // (you already have minHitInterval; that’s probably enough)
+        let eventType = (direction == .up) ? "level_threshold_up" : "level_threshold_down"
+
+        // You can keep the user-configured subject/body, but it’s often useful
+        // to inject direction/value for debugging:
+        let subject = config.notificationTitle
+        let body = "\(config.notificationBody) y=\(Int(yAbs))°, thr=\(Int(config.threshold))° (\(direction == .up ? "up" : "down"))."
+        NotificationService.shared.sendPush(
+          subject: subject,
+          body: body,
+          taskId: taskId,
+          eventType: eventType,
+          sourceDeviceID: nil
+        )
+
+    }
     private func startSampling() {
         sampleTimer?.invalidate()
         sampleTimer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { _ in
@@ -329,7 +358,7 @@ struct LevelListeningView: View {
         let ref = db.collection("users").document(userUID).collection("tasks").document(taskId)
         let payload: [String: Any] = [
             "endedAt": Timestamp(date: Date()),
-            "endedReason": "user_stopped",
+            "endedBy": "user_stopped",
             "sendNotifications": sendNotificationsLive,
             "samples": samples.map { ["t": Timestamp(date: $0.time), "v": $0.value] }
         ]
@@ -351,22 +380,7 @@ struct LevelListeningView: View {
         }
     }
 
-    private func maybeNotify(direction: LevelMotionMonitor.HitKind, yAbs: Double) {
-        guard sendNotificationsLive else { return }
 
-        let content = UNMutableNotificationContent()
-        content.title = "Level threshold hit"
-        content.body = "y hit \(Int(config.thresholdDeg))° (\(direction == .up ? "up" : "down")). Current y: \(Int(yAbs))°."
-        content.sound = .default
-
-        UNUserNotificationCenter.current().add(
-            UNNotificationRequest(
-                identifier: "level.hit.\(UUID().uuidString)",
-                content: content,
-                trigger: nil
-            )
-        )
-    }
 }
 
 // MARK: - Motion Monitor (crossing-based hits)
@@ -393,10 +407,10 @@ private final class LevelMotionMonitor: ObservableObject {
 
     private var lastFlashAt: Date?
 
-    func start(thresholdDeg: Double) {
+    func start(threshold: Double) {
         guard motion.isDeviceMotionAvailable else { return }
 
-        threshold = thresholdDeg
+        self.threshold = threshold
         lastYAbs = 0
         pendingHit = nil
         hitFlash = false

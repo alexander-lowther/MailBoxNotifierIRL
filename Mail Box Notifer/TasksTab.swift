@@ -1,71 +1,83 @@
 
-import SwiftUI
 
-
-
-// MARK: - Card UI (keep in this file, or move to AppUI.swift)
-//
-//  TasksTab.swift
-//  Mailbox Notifier IRL
-//
-//  Updated to include Vibration + Power tasks.
-//
 
 import SwiftUI
-
 struct TasksTab: View {
-    let userUID: String
     let deviceID: String
-
-    // Keep your task catalog simple and explicit
     private let tasks: [TaskTile] = [
         .init(
-            title: "Sound Sensor",
+            title: "Light Change",
+            subtitle: "Camera detects light shift",
+            useCases: "MailBox, Cabinet, Door Open",
+            systemImage: AppSymbols.best(["bolt.badge.clock", "bolt"]),
+            destination: .light,
+            assetImage: "MailBox"
+        ),
+        
+        
+        .init(
+            title: "Sound Spike",
             subtitle: "Detect sound above a threshold",
+            useCases: "Dog Bark, Doorbell, Alarm",
             systemImage: AppSymbols.best(["ear.badge.waveform","ear"]),
-            destination: .sound
+            destination: .sound,
+            assetImage: nil
         ),
         .init(
-            title: "Vibration Sensor",
-            subtitle: "Detect vibration started/stopped",
+            title: "Vibration Change",
+            subtitle: "Vibration on vs off",
+            useCases: "Dryer, Compressor, Vehicle",
             systemImage: AppSymbols.best(["waveform.path.ecg", "waveform"]),
-            destination: .vibe
+            destination: .vibe,
+            assetImage: nil
         ),
         .init(
             title: "Power Loss",
             subtitle: "Detect charging lost/restored",
+            useCases: "Power Outage",
             systemImage: AppSymbols.best(["bolt.badge.clock", "bolt"]),
-            destination: .power
+            destination: .power ,
+            assetImage: nil
         ),
         
         
             .init(
-                title: "Level Sensor",
-                subtitle: "Measure Angles",
+                title: "Angle Change",
+                subtitle: "Level will detect tilt in degress",
+                useCases: "Incline, Level",
                 systemImage: AppSymbols.best(["bolt.badge.clock", "bolt"]),
-                destination: .level
+                destination: .level,
+                assetImage: nil
             ),
         
         
-            .init(
-                title: "Light Change",
-                subtitle: "Notify mail",
-                systemImage: AppSymbols.best(["bolt.badge.clock", "bolt"]),
-                destination: .light
-            ),
-        
+  
+ //       .init(
+ //           title: "Camera",
+  //          subtitle: "Multi-purpose streaming camera",
+  //          useCases: "Security, Dash Cam",
+  //          systemImage: AppSymbols.best(["video", "camera"]),
+  //          destination: .camera,
+  //          assetImage: nil
+  //      ),
+
         // Add your other tasks here…
     ]
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 18) {
                 Text("Tasks")
                     .font(.largeTitle.bold())
-
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                LazyVGrid(
+                    columns: [
+                        GridItem(.flexible(), spacing: 12),
+                        GridItem(.flexible(), spacing: 12)
+                    ],
+                    spacing: 16   // ✅ vertical spacing only (row-to-row)
+                ) {
                     ForEach(tasks) { tile in
-                        NavigationLink {
+                        CompatNavigationLink {
                             destinationView(for: tile.destination)
                         } label: {
                             TaskCard(tile: tile)
@@ -73,6 +85,7 @@ struct TasksTab: View {
                         .buttonStyle(.plain)
                     }
                 }
+
             }
             .padding()
         }
@@ -84,51 +97,86 @@ struct TasksTab: View {
     private func destinationView(for dest: TaskDestination) -> some View {
         switch dest {
         case .sound:
-            SoundSensorSetupView(functionTitle: "Sound Sensor")
+            SoundSensorSetupView(functionTitle: "Sound Spike", deviceID: deviceID)
 
         case .vibe:
-            VibeSensorSetupView(functionTitle: "Vibration Sensor")
+            VibeSensorSetupView(functionTitle: "Vibration \n Change", deviceID: deviceID)
 
         case .power:
-            PowerLossSetupView(functionTitle: "Power Loss")
+            PowerLossSetupView(functionTitle: "Power Loss", deviceID: deviceID)
             // NOTE: you renamed the file to PowerTask.swift, but the struct name
             // in the code I provided is PowerLossSetupView. That is fine.
             // File name does not need to match struct name.
         case .level:
-            LevelSensorSetupView(functionTitle: "Level Sensor")
+            LevelSensorSetupView(functionTitle: "Angle Changes", deviceID: deviceID)
             
         case .light:
-            LightChangeSensorSetupView(functionTitle: "Light Change")
+            LightChangeSetupView(functionTitle: "Light Changes", deviceID: deviceID)
+            
+        case .camera:
+                CameraRelaySetupView(functionTitle: "Camera", deviceID: deviceID)
         }
     }
 }
+
 private struct TaskCard: View {
     let tile: TaskTile
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Image(systemName: tile.systemImage)
-                    .font(.system(size: 26, weight: .bold))
-                    .foregroundStyle(.black)
-                    .padding(10)
-                    .background(Color.green.opacity(0.85))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+    private var displayTitle: String {
+        tile.title
+            .replacingOccurrences(of: "\n", with: " ")
+            .replacingOccurrences(of: "  ", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 
-                Spacer()
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+        
+            HStack(alignment: .center, spacing: 12) {
+                
+                if tile.assetImage == nil {
+
+                    Image(systemName: tile.systemImage)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(.black)
+                        .frame(width: 40, height: 40)
+                        .background(Color.green.opacity(0.85))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                } else {
+                    Image(tile.assetImage!)
+                        .resizable()
+                        .scaledToFit()
+                      //  .renderingMode(.template)
+                        .foregroundStyle(.black)
+                        .frame(width: 24, height: 24)
+                        .frame(width: 40, height: 40)
+                        .background(Color.green.opacity(0.85))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                }
+                Text(displayTitle)
+                    .font(.system(size: 16, weight: .semibold))
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.85)     // a touch more help for long titles
+                    .allowsTightening(true)
+                    .frame(maxWidth: .infinity, alignment: .leading) // ✅ take remaining width
+                    .layoutPriority(1)            // ✅ stop the squeeze-wrap weirdness
             }
 
-            Text(tile.title)
-                .font(.headline)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(tile.subtitle)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
 
-            Text(tile.subtitle)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(2)
-
-            Spacer(minLength: 0)
+                Text(tile.useCases)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+            }
         }
-        .padding(14)
+        .padding(10)
+
         .frame(maxWidth: .infinity, minHeight: 130, alignment: .topLeading)
         .background(AppTheme.surface)
         .clipShape(RoundedRectangle(cornerRadius: 16))
@@ -143,11 +191,14 @@ private enum TaskDestination {
     case power
     case level
     case light
+    case camera
 }
 private struct TaskTile: Identifiable {
     let id = UUID()
     let title: String
     let subtitle: String
+    let useCases: String
     let systemImage: String
     let destination: TaskDestination
+    let assetImage: String?
 }

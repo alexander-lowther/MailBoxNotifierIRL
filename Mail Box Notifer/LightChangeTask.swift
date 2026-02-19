@@ -1,23 +1,28 @@
 
-
 import SwiftUI
+import AVFoundation
 import Firebase
 import FirebaseFirestore
 import FirebaseAuth
-import AVFoundation
-import UserNotifications
 import UIKit
-
+import CoreImage
+import SwiftUI
+import AVFoundation
+import Firebase
+import FirebaseFirestore
+import FirebaseAuth
+import UIKit
+import CoreImage
+import CoreVideo      // ✅ add this
+import CoreMedia      // ✅ add this (safe/typical with CMSampleBuffer)
 // MARK: - Setup View
 
-struct LightChangeSensorSetupView: View {
+struct LightChangeSetupView: View {
     let functionTitle: String
-
-    @State private var sensitivity: Double = 0.18          // normalized luminance delta (0..1)
-    @State private var requireSustainedMs: Double = 250     // avoid false triggers
+    let deviceID: String
     @State private var sendNotifications: Bool = true
-    @State private var notificationTitle: String = "Opened"
-    @State private var notificationBody: String = "Light changed — your compartment was opened."
+    @State private var notificationTitle: String = ""
+    @State private var notificationBody: String = ""
 
     @State private var createdTaskId: String = ""
     @State private var pushToListening: Bool = false
@@ -28,72 +33,44 @@ struct LightChangeSensorSetupView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
 
+                // Keep it simple, hands-free, no overwhelm
                 BeforeYouBeginCard(
                     title: "Before you begin",
-                    subtitle: "Best setup for reliable detection",
+                    subtitle: "Hands-free mailbox monitoring",
                     bullets: [
-                        ("Camera facing up", "Place the phone with the screen down and camera facing the opening."),
-                        ("Press Start before placing", "Start listening first, then set it in the mailbox/cabinet."),
-                        ("Avoid moving the phone", "Movement can cause brightness swings and false triggers.")
+                        ("Use the front camera", "Place the phone so the face camera points into the mailbox."),
+                        ("Plug in if possible", "Long listening sessions can drain battery."),
+                        ("Start and leave it", "The task runs hands-free once started.")
                     ]
                 )
 
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Sensitivity")
-                        .font(.headline)
+                    Toggle("Send notifications to all my devices", isOn: $sendNotifications)
+                        .tint(.green)
 
-                    HStack {
-                        Text(String(format: "%.2f", sensitivity))
-                            .font(.system(.title3, design: .rounded).bold())
-                        Spacer()
+                    if sendNotifications {
+                        Text("Notification")
+                            .font(.headline)
+                            .padding(.top, 2)
+
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("Subject")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.secondary)
+
+                            TextField("Mail detected", text: $notificationTitle)
+                                .modifier(ModernTextFieldSurface())
+
+                            Text("Body")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.secondary)
+
+                            TextField("Your mailbox sensor detected mail activity.", text: $notificationBody)
+                                .modifier(ModernTextFieldSurface())
+                        }
                     }
-
-                    Slider(value: $sensitivity, in: 0.05...0.60, step: 0.01)
-                        .tint(.green)
-
-                    Text("Higher sensitivity triggers more easily. Start around 0.15–0.25.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-
-                    Divider().opacity(0.25)
-
-                    Text("Stability (ms)")
-                        .font(.headline)
-
-                    HStack {
-                        Text("\(Int(requireSustainedMs)) ms")
-                            .font(.system(.title3, design: .rounded).bold())
-                        Spacer()
-                    }
-
-                    Slider(value: $requireSustainedMs, in: 0...1000, step: 50)
-                        .tint(.green)
-
-                    Text("Requires the change to persist briefly to avoid false positives.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
-                .padding(16)
-                .background(.thinMaterial)
-                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-
-                // Custom notifications (like SoundTask)
-                VStack(alignment: .leading, spacing: 10) {
-                    Toggle("Send notifications", isOn: $sendNotifications)
-                        .tint(.green)
-
-                    TextField("Notification title", text: $notificationTitle)
-                        .textFieldStyle(.roundedBorder)
-                        .disabled(!sendNotifications)
-
-                    TextField("Notification body", text: $notificationBody, axis: .vertical)
-                        .lineLimit(2, reservesSpace: true)
-                        .textFieldStyle(.roundedBorder)
-                        .disabled(!sendNotifications)
-
-                    Text("Tip: keep the title short (e.g., “Mailbox opened”).")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
                 }
                 .padding(16)
                 .background(.thinMaterial)
@@ -104,27 +81,27 @@ struct LightChangeSensorSetupView: View {
                     createdTaskId = taskId
                     pushToListening = true
 
-                    forceEndAllTasks(endedBy: "Begin LightChange Listener") { _ in
+                    forceEndAllTasks(endedBy: "Begin Mailbox Camera Listener") { _ in
                         createTaskOneWrite(taskId: taskId)
                     }
                 } label: {
-                    Label("Start Light Change Sensor", systemImage: "camera.fill")
+                    Label("Start Mailbox Camera", systemImage: "camera.fill")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
 
                 NavigationLink(isActive: $pushToListening) {
                     let cfg = LightChangeConfig(
-                        sensitivity: sensitivity,
-                        requireSustainedMs: Int(requireSustainedMs),
                         sendNotifications: sendNotifications,
-                        notificationTitle: notificationTitle,
-                        notificationBody: notificationBody
+                        notificationTitle: effectiveNotificationTitle(),
+                        notificationBody: effectiveNotificationBody()
                     )
+
                     LightChangeListeningView(
                         config: cfg,
                         taskId: createdTaskId,
-                        userUID: Auth.auth().currentUser?.uid ?? ""
+                        userUID: Auth.auth().currentUser?.uid ?? "",
+                        deviceID: deviceID
                     )
                 } label: { EmptyView() }
                 .hidden()
@@ -135,25 +112,27 @@ struct LightChangeSensorSetupView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    // MARK: - Helpers
+    private func effectiveNotificationTitle() -> String {
+        guard sendNotifications else { return "Mail detected" }
+        return notificationTitle.isEmpty ? "Mail detected" : notificationTitle
+    }
+
+    private func effectiveNotificationBody() -> String {
+        guard sendNotifications else { return "Your mailbox sensor detected activity." }
+        return notificationBody.isEmpty ? "Your mailbox sensor detected activity." : notificationBody
+    }
 
     private func makeTaskId() -> String {
         db.collection("_tmp").document().documentID
     }
 
-    private func stableDeviceID() -> String {
-        if let existing = UserDefaults.standard.string(forKey: "stable_device_id"), !existing.isEmpty {
-            return existing
-        }
-        let newID = UUID().uuidString
-        UserDefaults.standard.set(newID, forKey: "stable_device_id")
-        return newID
-    }
+
 
     private func createTaskOneWrite(taskId: String) {
         guard let uid = Auth.auth().currentUser?.uid, !uid.isEmpty else { return }
 
-        let deviceID = stableDeviceID()
+       
+       
         let cachedName = UserDefaults.standard.string(forKey: "local_device_name")
         let fallbackName = UIDevice.current.name
         let deviceName = (cachedName?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)
@@ -164,25 +143,27 @@ struct LightChangeSensorSetupView: View {
 
         let payload: [String: Any] = [
             "name": "Light Change",
-            "type": "light_change",
+            "type": "camera_mailbox",
+
             "deviceID": deviceID,
             "deviceName": deviceName,
-            "listenerDeviceID": deviceID,
+
 
             "startedAt": Timestamp(date: Date()),
             "endedAt": NSNull(),
 
-            "sensitivity": sensitivity,
-            "requireSustainedMs": Int(requireSustainedMs),
-
             "sendNotifications": sendNotifications,
-            "notificationTitle": notificationTitle,
-            "notificationBody": notificationBody
+            "notificationTitle": effectiveNotificationTitle(),
+            "notificationBody": effectiveNotificationBody(),
+
+            // internal versioning for future tweaks
+            "cameraTaskVersion": 1,
+            "cameraPosition": "front"
         ]
 
         ref.setData(payload, merge: false) { err in
             if let err = err {
-                print("LightChange task create failed: \(err.localizedDescription)")
+                print("Mailbox camera task create failed: \(err.localizedDescription)")
             }
         }
     }
@@ -191,8 +172,6 @@ struct LightChangeSensorSetupView: View {
 // MARK: - Config
 
 struct LightChangeConfig: Hashable {
-    let sensitivity: Double
-    let requireSustainedMs: Int
     let sendNotifications: Bool
     let notificationTitle: String
     let notificationBody: String
@@ -204,33 +183,34 @@ struct LightChangeListeningView: View {
     let config: LightChangeConfig
     let taskId: String
     let userUID: String
-
+    let  deviceID: String
+    
     @StateObject private var camera = LightChangeCameraMonitor()
 
-    // live toggle + live editable title/body (like SoundTask)
-    @State private var sendNotificationsLive: Bool
-    @State private var titleLive: String
-    @State private var bodyLive: String
-
     @State private var status: String = "preparing…"
+
+    // Firestore logging (optional but consistent)
+    @State private var samples: [SessionSamplePoint] = []
     @State private var events: [[String: Any]] = []
+
+    @State private var sampleTimer: Timer? = nil
+
+    // Cooldown to prevent spam
+    @State private var lastNotifyAt: Date? = nil
+    private let notifyCooldown: TimeInterval = 60
+
+    // ✅ ONLY an initial "arming" buffer. During this, detections are ignored.
+    @State private var startedAt: Date = .distantPast
+    @State private var isArmed: Bool = false
+    @State private var armWorkItem: DispatchWorkItem? = nil
+    private let armDelay: TimeInterval = 10
 
     private let db = Firestore.firestore()
     @Environment(\.dismiss) private var dismiss
 
-    init(config: LightChangeConfig, taskId: String, userUID: String) {
-        self.config = config
-        self.taskId = taskId
-        self.userUID = userUID
-        _sendNotificationsLive = State(initialValue: config.sendNotifications)
-        _titleLive = State(initialValue: config.notificationTitle)
-        _bodyLive = State(initialValue: config.notificationBody)
-    }
-
     var body: some View {
         VStack(spacing: 14) {
 
-            // Header
             HStack(spacing: 12) {
                 Image(systemName: "camera.fill")
                     .font(.system(size: 34, weight: .bold))
@@ -239,414 +219,327 @@ struct LightChangeListeningView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Light Change")
                         .font(.title3.bold())
-                    Text("Sensitivity: \(String(format: "%.2f", config.sensitivity))")
-                        .font(.footnote)
+                    Text(status)
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                 }
 
                 Spacer()
-
-                Button {
-                    camera.recalibrate()
-                    status = "recalibrated"
-                } label: {
-                    Label("Recalibrate", systemImage: "scope")
-                }
-                .buttonStyle(.bordered)
             }
             .padding(.horizontal)
 
-            // Center camera preview
             CameraPreviewView(session: camera.session)
                 .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(.white.opacity(0.15), lineWidth: 1)
+                        .stroke(.primary.opacity(0.10), lineWidth: 1)
                 )
                 .padding(.horizontal)
-                .frame(height: 320)
 
-            // Bubble chips row
-            HStack(spacing: 12) {
-                BubbleChip(label: "base", value: String(format: "%.2f", camera.baselineLum), isActive: false)
-                Spacer(minLength: 0)
-                BubbleChip(label: "now", value: String(format: "%.2f", camera.currentLum), isActive: camera.isTriggered)
-            }
-            .padding(.horizontal)
-
-            BubbleStatus(text: status)
-
-            // Custom notifications controls (compact + bubble-ish)
-            VStack(alignment: .leading, spacing: 10) {
-                BubbleToggleChip(title: "Notifications", isOn: $sendNotificationsLive)
-
-                TextField("Title", text: $titleLive)
-                    .textFieldStyle(.roundedBorder)
-                    .disabled(!sendNotificationsLive)
-
-                TextField("Body", text: $bodyLive, axis: .vertical)
-                    .lineLimit(2, reservesSpace: true)
-                    .textFieldStyle(.roundedBorder)
-                    .disabled(!sendNotificationsLive)
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Hands-free monitoring")
+                    .font(.headline)
+                Text("Leave the phone in place. The first 10 seconds are ignored so you can place it in the cabinet. After that, when light increases, a push notification is sent.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
             .padding(.horizontal)
 
             Spacer()
 
-            Button {
-                stopAndDismiss()
+            Button(role: .destructive) {
+                stopListening()
             } label: {
-                Text("Stop Listening")
+                Label("Stop Listening", systemImage: "stop.circle")
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.bordered)
             .padding(.horizontal)
             .padding(.bottom, 18)
         }
+        .navigationBarBackButtonHidden(true)
         .onAppear {
-            requestCameraPermissionIfNeededAndStart()
-            if sendNotificationsLive { requestNotificationPermissionIfNeeded() }
+            UIApplication.shared.isIdleTimerDisabled = true
 
-            camera.onTrigger = {
-                // Log event + notify
-                let now = Date()
-                events.append([
-                    "t": Timestamp(date: now),
-                    "type": "light_change_triggered",
-                    "baseline": camera.baselineLum,
-                    "current": camera.currentLum
-                ])
+            startedAt = Date()
+            isArmed = false
+            status = "starting camera…"
 
-                status = "opened detected"
-                maybeNotify()
+            camera.onActivityDetected = { strength in
+                handleActivityDetected(strength: strength)
             }
+
+            camera.startFrontCamera()
+            startSampling()
+
+            // ✅ Arm after 10s. No delayed notification scheduling.
+            armWorkItem?.cancel()
+            let work = DispatchWorkItem {
+                isArmed = true
+                status = "listening…"
+            }
+            armWorkItem = work
+            status = "arming (10s)…"
+            DispatchQueue.main.asyncAfter(deadline: .now() + armDelay, execute: work)
         }
         .onDisappear {
+            UIApplication.shared.isIdleTimerDisabled = false
+            armWorkItem?.cancel()
+            armWorkItem = nil
+            sampleTimer?.invalidate()
+            sampleTimer = nil
             camera.stop()
         }
-        .navigationBarBackButtonHidden(true)
     }
 
-    // MARK: - Stop & persist minimal data
+    // MARK: - Sampling
 
-    private func stopAndDismiss() {
+    private func startSampling() {
+        sampleTimer?.invalidate()
+        sampleTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+            let p = SessionSamplePoint(time: Date(), value: camera.activityLevel)
+            samples.append(p)
+            if samples.count > 900 { samples.removeFirst(samples.count - 900) }
+        }
+    }
+
+    // MARK: - Detection handling (NO per-event delay)
+
+    private func handleActivityDetected(strength: Double) {
+        let now = Date()
+
+        // ✅ Ignore any detection before arming completes
+        guard isArmed else {
+            // Keep status stable; do not spam UI.
+            return
+        }
+
+        // status + event log
+        status = "activity detected"
+        events.append([
+            "t": Timestamp(date: now),
+            "type": "mail_activity_detected",
+            "strength": strength
+        ])
+
+        // If notifications disabled, do nothing further
+        guard config.sendNotifications else { return }
+
+        // Cooldown guard (prevents spam if cabinet flutters / repeated exposure)
+        if let last = lastNotifyAt, now.timeIntervalSince(last) < notifyCooldown {
+            return
+        }
+
+        lastNotifyAt = now
+        status = "sending notification…"
+
+        NotificationService.shared.sendPush(
+            subject: config.notificationTitle,
+            body: config.notificationBody,
+            taskId: taskId,
+            eventType: "mail_activity_detected",
+            sourceDeviceID: deviceID
+        )
+
+        // Return to listening state quickly
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+            if isArmed { status = "listening…" }
+        }
+    }
+
+    // MARK: - Stop / Firestore write
+
+    private func stopListening() {
+        UIApplication.shared.isIdleTimerDisabled = false
+        armWorkItem?.cancel()
+        armWorkItem = nil
+        sampleTimer?.invalidate()
+        sampleTimer = nil
         camera.stop()
+        endTask()
+        dismiss()
+    }
 
+    private func endTask() {
+        guard !userUID.isEmpty else { return }
         let ref = db.collection("users").document(userUID).collection("tasks").document(taskId)
 
-        let payload: [String: Any] = [
+        var payload: [String: Any] = [
             "endedAt": Timestamp(date: Date()),
-            "endedReason": "user_stopped",
-
-            "sendNotifications": sendNotificationsLive,
-            "notificationTitle": titleLive,
-            "notificationBody": bodyLive,
-
-            "events": events
+            "endedBy": "user_stopped"
         ]
+
+        payload["samples"] = samples.map { ["t": Timestamp(date: $0.time), "v": $0.value] }
+        payload["events"] = events
 
         ref.setData(payload, merge: true) { err in
             if let err = err {
-                print("LightChange end failed: \(err.localizedDescription)")
+                print("Mailbox camera task end failed: \(err.localizedDescription)")
             }
-            dismiss()
         }
     }
 
-    // MARK: - Permissions
-
-    private func requestCameraPermissionIfNeededAndStart() {
-        switch AVCaptureDevice.authorizationStatus(for: .video) {
-        case .authorized:
-            camera.start(sensitivity: config.sensitivity, requireSustainedMs: config.requireSustainedMs)
-            status = "listening…"
-        case .notDetermined:
-            AVCaptureDevice.requestAccess(for: .video) { granted in
-                DispatchQueue.main.async {
-                    if granted {
-                        camera.start(sensitivity: config.sensitivity, requireSustainedMs: config.requireSustainedMs)
-                        status = "listening…"
-                    } else {
-                        status = "camera permission denied"
-                    }
-                }
-            }
-        default:
-            status = "camera permission denied"
-        }
-    }
-
-    private func requestNotificationPermissionIfNeeded() {
-        UNUserNotificationCenter.current().getNotificationSettings { settings in
-            guard settings.authorizationStatus == .notDetermined else { return }
-            UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
-        }
-    }
-
-    // MARK: - Notify
-
-    private func maybeNotify() {
-        guard sendNotificationsLive else { return }
-
-        let content = UNMutableNotificationContent()
-        content.title = titleLive.isEmpty ? "Opened" : titleLive
-        content.body = bodyLive.isEmpty ? "Light changed — opened detected." : bodyLive
-        content.sound = .default
-
-        UNUserNotificationCenter.current().add(
-            UNNotificationRequest(
-                identifier: "lightchange.\(UUID().uuidString)",
-                content: content,
-                trigger: nil
-            )
-        )
-    }
+ 
 }
 
-// MARK: - Camera Monitor (brightness detector)
+// MARK: - Camera Monitor
 
 final class LightChangeCameraMonitor: NSObject, ObservableObject, AVCaptureVideoDataOutputSampleBufferDelegate {
     let session = AVCaptureSession()
 
-    @Published var baselineLum: Double = 0.0
-    @Published var currentLum: Double = 0.0
-    @Published var isTriggered: Bool = false
+    @Published var activityLevel: Double = 0.0 // 0..1 normalized for chart/UI
 
-    var onTrigger: (() -> Void)?
+    // Callbacks
+    var onActivityDetected: ((Double) -> Void)?
 
-    private var sensitivity: Double = 0.18
-    private var requireSustainedMs: Int = 250
+    private let output = AVCaptureVideoDataOutput()
+    private let queue = DispatchQueue(label: "MailboxCameraMonitor.frames")
 
-    private var lastCalibratedAt: CFTimeInterval = CACurrentMediaTime()
+    private let ciContext = CIContext(options: nil)
 
-    // Sustained detection
-    private var aboveSince: CFTimeInterval? = nil
-    private var lastTriggerAt: CFTimeInterval = 0
-    private let triggerCooldown: CFTimeInterval = 1.5  // avoid rapid re-triggers
+    // Internal detection (no user-facing sensitivity)
+    private var baseline: Double? = nil
+    private var lastTriggeredAt: Date = .distantPast
 
-    private let queue = DispatchQueue(label: "LightChangeCameraQueue")
+    // Internal: tuned to be conservative + stable
+    private let warmupFrames = 18
+    private var frameCount = 0
+    private let triggerDelta: Double = 0.12        // internal threshold
+    private let minTriggerGap: TimeInterval = 3.0  // internal debounce
 
-    func start(sensitivity: Double, requireSustainedMs: Int) {
-        self.sensitivity = sensitivity
-        self.requireSustainedMs = requireSustainedMs
-
-        configureSessionIfNeeded()
-        recalibrate()
-        session.startRunning()
-    }
-
-    func stop() {
-        session.stopRunning()
-        aboveSince = nil
-        isTriggered = false
-    }
-
-    func recalibrate() {
-        baselineLum = currentLum
-        lastCalibratedAt = CACurrentMediaTime()
-        aboveSince = nil
-        isTriggered = false
-    }
-
-    private var isConfigured = false
-    private func configureSessionIfNeeded() {
-        guard !isConfigured else { return }
-        isConfigured = true
+    func startFrontCamera() {
+        stop()
 
         session.beginConfiguration()
         session.sessionPreset = .medium
 
-        guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
-              let input = try? AVCaptureDeviceInput(device: device),
-              session.canAddInput(input) else {
+        // FRONT camera
+        guard let camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front),
+              let input = try? AVCaptureDeviceInput(device: camera) else {
             session.commitConfiguration()
             return
         }
-        session.addInput(input)
 
-        let output = AVCaptureVideoDataOutput()
+        if session.canAddInput(input) { session.addInput(input) }
+        output.videoSettings = [
+            kCVPixelBufferPixelFormatTypeKey as String: Int(kCVPixelFormatType_32BGRA)
+        ]
+
         output.alwaysDiscardsLateVideoFrames = true
-        output.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
         output.setSampleBufferDelegate(self, queue: queue)
 
-        if session.canAddOutput(output) {
-            session.addOutput(output)
-        }
+        if session.canAddOutput(output) { session.addOutput(output) }
 
-        if let conn = output.connection(with: .video), conn.isVideoOrientationSupported {
+        if let conn = output.connection(with: .video) {
             conn.videoOrientation = .portrait
+            conn.isVideoMirrored = true
         }
 
         session.commitConfiguration()
+
+        baseline = nil
+        frameCount = 0
+        lastTriggeredAt = .distantPast
+        activityLevel = 0
+
+        session.startRunning()
     }
 
-    // MARK: - Sample buffer delegate
+    func stop() {
+        if session.isRunning { session.stopRunning() }
+        session.inputs.forEach { session.removeInput($0) }
+        session.outputs.forEach { session.removeOutput($0) }
+    }
+
+    // MARK: - Frame processing
 
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
-        guard let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
-        CVPixelBufferLockBaseAddress(imageBuffer, .readOnly)
-        defer { CVPixelBufferUnlockBaseAddress(imageBuffer, .readOnly) }
+        guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
 
-        // Fast luminance approximation: sample a small grid
-        let lum = Self.estimateLuminance(from: imageBuffer)
+        // Compute mean luminance-ish quickly via CIAreaAverage
+        let ciImage = CIImage(cvPixelBuffer: pixelBuffer)
+        let extent = ciImage.extent
 
+        guard let filter = CIFilter(name: "CIAreaAverage") else { return }
+        filter.setValue(ciImage, forKey: kCIInputImageKey)
+        filter.setValue(CIVector(cgRect: extent), forKey: kCIInputExtentKey)
+        guard let out = filter.outputImage else { return }
+
+        var bitmap = [UInt8](repeating: 0, count: 4)
+        ciContext.render(out,
+                         toBitmap: &bitmap,
+                         rowBytes: 4,
+                         bounds: CGRect(x: 0, y: 0, width: 1, height: 1),
+                         format: .RGBA8,
+                         colorSpace: CGColorSpaceCreateDeviceRGB())
+
+        // Luma approximation from RGB
+        let r = Double(bitmap[0]) / 255.0
+        let g = Double(bitmap[1]) / 255.0
+        let b = Double(bitmap[2]) / 255.0
+        let mean = (0.2126 * r + 0.7152 * g + 0.0722 * b)
+
+        frameCount += 1
+
+        // Establish baseline
+        if baseline == nil {
+            baseline = mean
+            return
+        }
+
+        guard let baseBefore = baseline else { return }
+        let diff = mean - baseBefore
+        let delta = abs(diff)
+
+        // normalize for UI charts
+        let normalized = min(1.0, max(0.0, delta / 0.35))
         DispatchQueue.main.async {
-            self.currentLum = lum
-
-            // If baseline is 0 (first frames), set it gently
-            if self.baselineLum == 0.0 && (CACurrentMediaTime() - self.lastCalibratedAt) < 1.0 {
-                self.baselineLum = lum
-            }
-
-            self.evaluateTrigger()
+            self.activityLevel = (self.activityLevel * 0.85) + (normalized * 0.15)
         }
-    }
 
-    private func evaluateTrigger() {
-        let delta = abs(currentLum - baselineLum)
-        let now = CACurrentMediaTime()
+        // Trigger logic: ONLY when light increased (drawer opened)
+        let now = Date()
+        let shouldTrigger =
+            frameCount > warmupFrames &&
+            diff >= triggerDelta &&
+            now.timeIntervalSince(lastTriggeredAt) >= minTriggerGap
 
-        // Treat large change as "opened"
-        if delta >= sensitivity {
-            if aboveSince == nil { aboveSince = now }
-            let sustained = (now - (aboveSince ?? now)) * 1000.0
-
-            if sustained >= Double(requireSustainedMs),
-               (now - lastTriggerAt) >= triggerCooldown {
-                lastTriggerAt = now
-                isTriggered = true
-                onTrigger?()
+        if shouldTrigger {
+            lastTriggeredAt = now
+            DispatchQueue.main.async {
+                self.onActivityDetected?(delta)
             }
+            // Freeze baseline on trigger so the jump doesn't get absorbed immediately
+            return
+        }
+
+        // Baseline update AFTER trigger evaluation
+        if frameCount <= warmupFrames {
+            baseline = (baseBefore * 0.90) + (mean * 0.10)
         } else {
-            aboveSince = nil
-            isTriggered = false
+            baseline = (baseBefore * 0.985) + (mean * 0.015)
         }
-    }
-
-    // MARK: - Luminance estimate
-
-    private static func estimateLuminance(from pixelBuffer: CVPixelBuffer) -> Double {
-        let width = CVPixelBufferGetWidth(pixelBuffer)
-        let height = CVPixelBufferGetHeight(pixelBuffer)
-        guard let base = CVPixelBufferGetBaseAddress(pixelBuffer) else { return 0 }
-
-        let bytesPerRow = CVPixelBufferGetBytesPerRow(pixelBuffer)
-        let ptr = base.assumingMemoryBound(to: UInt8.self)
-
-        // Sample a 10x10 grid
-        let gridX = 10
-        let gridY = 10
-        var sum: Double = 0
-        var count: Double = 0
-
-        for gy in 0..<gridY {
-            let y = (height * gy) / (gridY + 1)
-            for gx in 0..<gridX {
-                let x = (width * gx) / (gridX + 1)
-                let offset = y * bytesPerRow + x * 4
-                let b = Double(ptr[offset + 0])
-                let g = Double(ptr[offset + 1])
-                let r = Double(ptr[offset + 2])
-
-                // Rec. 709 luma
-                let l = 0.2126*r + 0.7152*g + 0.0722*b
-                sum += l
-                count += 1
-            }
-        }
-
-        // normalize 0..1
-        return (count == 0) ? 0 : (sum / count) / 255.0
     }
 }
 
-// MARK: - Camera Preview UIViewRepresentable
+// MARK: - Preview
 
 struct CameraPreviewView: UIViewRepresentable {
     let session: AVCaptureSession
 
-    func makeUIView(context: Context) -> PreviewView {
-        let v = PreviewView()
+    func makeUIView(context: Context) -> PreviewUIView {
+        let v = PreviewUIView()
         v.videoPreviewLayer.session = session
         v.videoPreviewLayer.videoGravity = .resizeAspectFill
         return v
     }
 
-    func updateUIView(_ uiView: PreviewView, context: Context) {
+    func updateUIView(_ uiView: PreviewUIView, context: Context) {
         uiView.videoPreviewLayer.session = session
     }
-}
 
-final class PreviewView: UIView {
-    override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
-    var videoPreviewLayer: AVCaptureVideoPreviewLayer { layer as! AVCaptureVideoPreviewLayer }
-}
-
-// MARK: - Bubble helpers (match your existing style from LevelTask_v4)
-
-private struct BubbleChip: View {
-    let label: String
-    let value: String
-    let isActive: Bool
-
-    var body: some View {
-        HStack(spacing: 10) {
-            Text(label)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.secondary)
-                .frame(width: 24, height: 24)
-                .background(.ultraThinMaterial, in: Circle())
-
-            Text(value)
-                .font(.system(.headline, design: .rounded).bold())
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(isActive ? Color.green.opacity(0.18) : Color.black.opacity(0.08))
-        .clipShape(Capsule())
-    }
-}
-
-private struct BubbleToggleChip: View {
-    let title: String
-    @Binding var isOn: Bool
-
-    var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: isOn ? "bell.fill" : "bell.slash")
-                .foregroundStyle(isOn ? .green : .secondary)
-                .frame(width: 24, height: 24)
-                .background(.ultraThinMaterial, in: Circle())
-
-            Text(title)
-                .font(.subheadline.weight(.semibold))
-
-            Toggle("", isOn: $isOn)
-                .labelsHidden()
-                .tint(.green)
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(Color.black.opacity(0.08))
-        .clipShape(Capsule())
-        .onChange(of: isOn) { newValue in
-            if newValue {
-                UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
-            }
-        }
-    }
-}
-
-private struct BubbleStatus: View {
-    let text: String
-    var body: some View {
-        Text(text)
-            .font(.subheadline)
-            .foregroundStyle(.secondary)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .background(.thinMaterial)
-            .clipShape(Capsule())
-            .padding(.horizontal)
+    final class PreviewUIView: UIView {
+        override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
+        var videoPreviewLayer: AVCaptureVideoPreviewLayer { layer as! AVCaptureVideoPreviewLayer }
     }
 }

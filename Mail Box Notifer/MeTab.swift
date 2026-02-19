@@ -1,129 +1,99 @@
 
 import SwiftUI
 import FirebaseAuth
+import FirebaseFirestore
+import FirebaseFunctions
 
+/// "Me" / Account screen (production-safe, iOS 15+).
+/// - Always returns the user to Sign In by clearing `@AppStorage("userUID")`.
+/// - Deletion is performed server-side via callable `deleteAccountHard` to guarantee:
+///   - Firestore subtree under /users/{uid}/** is deleted
+///   - Auth user is deleted
+/// - On any deletion failure, we sign out (per requirement).
 struct MeView: View {
     let userUID: String
+    private let db = Firestore.firestore() // kept (no extra changes), though not used for deletion anymore
+    private let functions = Functions.functions()
+
+    @AppStorage("userUID") private var storedUID: String = ""
 
     @State private var email: String = ""
-    @State private var displayName: String = ""
     @State private var providerSummary: String = ""
-    @State private var showSignOutConfirm: Bool = false
+
+    @State private var showSignOutConfirm = false
+    @State private var showDeleteConfirm = false
+
+    @State private var isWorking = false
+    @State private var statusText: String? = nil   // minimal surface area for errors
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 16) {
+        AppNavigationContainer {
+            List {
+                Section(header: Text("Account")) {
+                    infoRow(title: "Email", value: email.isEmpty ? "Not available" : email)
+                    infoRow(title: "Provider", value: providerSummary.isEmpty ? "Unknown" : providerSummary)
+                }
 
-                    headerCard
+                if let statusText {
+                    Section {
+                        Text(statusText)
+                            .font(.footnote)
+                            .foregroundStyle(.red)
+                    }
+                }
 
-                    accountCard
-
+                Section {
                     Button(role: .destructive) {
                         showSignOutConfirm = true
                     } label: {
                         Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
-                            .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.bordered)
-                    .padding(.top, 4)
+                    .disabled(isWorking)
 
-                    Spacer(minLength: 8)
+                    Button(role: .destructive) {
+                        showDeleteConfirm = true
+                    } label: {
+                        Label(isWorking ? "Working…" : "Delete Account", systemImage: "trash")
+                    }
+                    .disabled(isWorking)
                 }
-                .padding()
             }
             .navigationTitle("Me")
             .navigationBarTitleDisplayMode(.large)
-            .onAppear {
-                hydrateFromAuth()
-            }
+            .onAppear(perform: hydrateFromAuth)
             .confirmationDialog(
                 "Sign out of this device?",
                 isPresented: $showSignOutConfirm,
                 titleVisibility: .visible
             ) {
                 Button("Sign Out", role: .destructive) {
-                    signOut()
+                    goToSignIn()
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("You will need to sign in again to use this app on this device.")
+                Text("You’ll need to sign in again to use this app on this device.")
+            }
+            .confirmationDialog(
+                "Delete this account?",
+                isPresented: $showDeleteConfirm,
+                titleVisibility: .visible
+            ) {
+                Button("Delete Account", role: .destructive) {
+                    statusText = nil
+                    deleteAccount()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This is permanent. If deletion can’t be completed right now, we’ll sign you out.")
             }
         }
     }
 
-    private var headerCard: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 12) {
-                ZStack {
-                    Circle()
-                        .fill(AppTheme.surface)
-                        .overlay(Circle().strokeBorder(.primary.opacity(0.08), lineWidth: 1))
-                        .frame(width: 52, height: 52)
+    // MARK: - UI helpers
 
-                    Image(systemName: "person.crop.circle.fill")
-                        .font(.system(size: 28, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                }
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(displayName.isEmpty ? "Account" : displayName)
-                        .font(.title3.bold())
-                    Text(email.isEmpty ? "Signed in" : email)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                }
-
-                Spacer()
-            }
-
-            if !userUID.isEmpty {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("User ID")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                    Text(userUID)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .textSelection(.enabled)
-                        .lineLimit(2)
-                        .truncationMode(.middle)
-                }
-                .padding(.top, 6)
-            }
-        }
-        .padding(14)
-        .background(AppTheme.surface)
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(.primary.opacity(0.08), lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-    }
-
-    private var accountCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Account Details")
-                .font(.headline)
-
-            row("Email", value: email.isEmpty ? "Not available" : email)
-            row("Provider", value: providerSummary.isEmpty ? "Unknown" : providerSummary)
-        }
-        .padding(14)
-        .background(AppTheme.surface)
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(.primary.opacity(0.08), lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-    }
-
-    private func row(_ title: String, value: String) -> some View {
+    private func infoRow(title: String, value: String) -> some View {
         HStack(alignment: .firstTextBaseline) {
-            Text(title)
-                .font(.subheadline.weight(.semibold))
+            Text(title).font(.subheadline.weight(.semibold))
             Spacer()
             Text(value)
                 .font(.subheadline)
@@ -131,36 +101,73 @@ struct MeView: View {
                 .multilineTextAlignment(.trailing)
                 .lineLimit(2)
         }
-        .padding(.vertical, 4)
     }
+
+    // MARK: - Data hydration
 
     private func hydrateFromAuth() {
         guard let user = Auth.auth().currentUser else {
             email = ""
-            displayName = ""
             providerSummary = ""
             return
         }
 
-        // Email:
-        // - With Sign in with Apple via Firebase, `user.email` is often present
-        //   but it is NOT guaranteed on every sign-in (Apple may not provide after first consent).
         email = user.email ?? ""
-
-        // Display name (Apple often does not provide on later sign-ins)
-        displayName = user.displayName ?? ""
-
-        // Provider info
         let providers = user.providerData.map { $0.providerID }
         providerSummary = providers.isEmpty ? "Unknown" : providers.joined(separator: ", ")
     }
 
-    private func signOut() {
-        do {
-            try Auth.auth().signOut()
-        } catch {
-            // If you have a global error surface, wire it here. Keeping it silent to avoid UI churn.
+    // MARK: - Deletion (server-side, guaranteed)
+
+    private func deleteAccount() {
+        guard Auth.auth().currentUser != nil else {
+            goToSignIn()
+            return
         }
-        UserDefaults.standard.removeObject(forKey: "userUID")
+
+        isWorking = true
+        statusText = "Deleting account…"
+
+        Task {
+            do {
+                try await callDeleteAccountHard()
+                // At this point: Firestore subtree + Auth user are deleted server-side.
+                // Local sign-out is just UI cleanup.
+                do { try Auth.auth().signOut() } catch { /* ignore */ }
+                await MainActor.run {
+                    isWorking = false
+                    statusText = nil
+                    storedUID = ""
+                }
+            } catch {
+                // Per requirement: if we cannot complete deletion right now, sign out.
+                await MainActor.run {
+                    isWorking = false
+                    statusText = "Couldn’t delete account right now. Signed you out."
+                    goToSignIn()
+                }
+            }
+        }
+    }
+
+    private func callDeleteAccountHard() async throws {
+        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
+            functions.httpsCallable("deleteAccountHard").call([:]) { _, error in
+                if let error = error {
+                    cont.resume(throwing: error)
+                } else {
+                    cont.resume(returning: ())
+                }
+            }
+        }
+    }
+
+
+    // MARK: - Sign out / return to Sign In
+
+    private func goToSignIn() {
+        // Always return to sign-in by clearing local auth + AppStorage state.
+        do { try Auth.auth().signOut() } catch { /* ignore */ }
+        storedUID = ""
     }
 }
