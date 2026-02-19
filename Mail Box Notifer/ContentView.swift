@@ -1,790 +1,564 @@
 
+import SwiftUI
+import Firebase
+import FirebaseAuth
+import FirebaseFirestore
+import AuthenticationServices
+import CryptoKit
+import UIKit
 
+// MARK: - Task Model
+
+struct TaskDoc: Identifiable {
+    let id: String
+    let name: String
+    let deviceID: String
+    let startedAt: Date
+    let endedAt: Date?
+    let endedBy: String?
+    let notificationTitle: String?
+    let notificationBody: String?
+    let hasSamples: Bool
+    let deviceName: String
+    let threshold: Double?
+    let type: String
+    init?(id: String, data: [String: Any]) {
+        guard
+            let name = data["name"] as? String,
+            let dbDeviceID = data["deviceID"] as? String,
+            let startedAt = (data["startedAt"] as? Timestamp)?.dateValue(),
+            let deviceName = data["deviceName"] as? String
+        else { return nil }
+
+        self.id = id
+        self.name = name
+        self.deviceID = dbDeviceID
+        self.startedAt = startedAt
+        self.deviceName = deviceName
+        self.endedAt = (data["endedAt"] as? Timestamp)?.dateValue()
+        self.endedBy = data["endedBy"] as? String
+        self.notificationTitle = data["notificationTitle"] as? String
+        self.notificationBody = data["notificationBody"] as? String
+        self.threshold = data["threshold"] as? Double
+        self.type = data["type"] as? String ?? "default"
+        if let samples = data["samples"] as? [[String: Any]] {
+            self.hasSamples = !samples.isEmpty
+        } else {
+            self.hasSamples = false
+        }
+    }
+}
+
+// MARK: - TaskLog (NO realtime listener; manual refresh only)
+import Foundation
+import FirebaseFirestore
+
+final class TaskLog: ObservableObject {
+    @Published var previousTasks: [TaskDoc] = []
+    @Published var activeTasks: [TaskDoc] = []   // ✅ ADDED
+
+    func refresh(userUID: String, completion: ((Error?) -> Void)? = nil) {
+        guard !userUID.isEmpty else {
+            previousTasks = []
+            activeTasks = []                     // ✅ ADDED
+            completion?(NSError(domain: "Auth", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not signed in."]))
+            return
+        }
+
+        Firestore.firestore()
+            .collection("users")
+            .document(userUID)
+            .collection("tasks")
+            .order(by: "startedAt", descending: true)
+            .limit(to: 100)
+            .getDocuments { [weak self] snap, err in
+                if let err = err {
+                    completion?(err)
+                    return
+                }
+
+                let docs = snap?.documents ?? []
+                let all = docs.compactMap { TaskDoc(id: $0.documentID, data: $0.data()) }
+
+                // ✅ ADDED: active = endedAt missing OR null OR not set (all map to endedAt == nil)
+                let active = all
+                    .filter { $0.endedAt == nil }
+                    .sorted { $0.startedAt > $1.startedAt }
+
+                // We only ever want ONE active task (most recent)
+                self?.activeTasks = active.first.map { [$0] } ?? []
+
+                // Existing previous task logic (unchanged)
+                let closed = all.filter { $0.endedAt != nil }
+
+                self?.previousTasks = closed.sorted { a, b in
+                    switch (a.endedAt, b.endedAt) {
+                    case let (da?, db?): return da > db
+                    case (_?, nil): return true
+                    case (nil, _?): return false
+                    default: return a.startedAt > b.startedAt
+                    }
+                }
+
+                completion?(nil)
+            }
+    }
+}
 
 
 import SwiftUI
-import Firebase
-import FirebaseMessaging
-import UserNotifications
 import AuthenticationServices
 import CryptoKit
+import FirebaseAuth
+import FirebaseFirestore
 
-// MARK: - Single-file App Entry
+import SwiftUI
+import AuthenticationServices
+import CryptoKit
+import FirebaseAuth
+import FirebaseFirestore
+import UIKit
+import FirebaseMessaging
+import FirebaseFirestore
 
-// MARK: - AppDelegate (APNs/FCM wiring)
+func syncFCMTokenAfterLogin(uid: String, deviceID: String) {
+    Messaging.messaging().token { token, error in
+        guard let token = token, error == nil else { return }
 
-// MARK: - Root Content
-
-
-
-
-
-struct ContentView: View {
-    @AppStorage("userUID") private var userUID: String = ""
-    @State private var currentNonce: String?
-    @State private var errorMessage: String?
-
-    var body: some View {
-        Group {
-            if userUID.isEmpty {
-                AuthGate(currentNonce: $currentNonce, errorMessage: $errorMessage)
-            } else {
-                MainShell(userUID: userUID)
-            }
-        }
-        .onAppear {
-            UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in
-                DispatchQueue.main.async { UIApplication.shared.registerForRemoteNotifications() }
-            }
-        }
+        let db = Firestore.firestore()
+        upsertDeviceFCMToken(uid: uid, deviceID: deviceID, token: token)
     }
 }
-
-// MARK: - Auth Gate (Sign in with Apple)
 struct AuthGate: View {
     @Binding var currentNonce: String?
     @Binding var errorMessage: String?
+
     @AppStorage("userUID") private var userUID: String = ""
 
-    var body: some View {
-        VStack(spacing: 20) {
-            Spacer(minLength: 20)
-            Text("📮 Mailbox Notifier IRL").font(.largeTitle.bold())
-            Text("Sign in with Apple to link this device.")
-                .font(.subheadline).foregroundStyle(.secondary)
-                .multilineTextAlignment(.center).padding(.horizontal)
+    let deviceID = DeviceIdentity.id();
 
-            SignInWithAppleButton { req in
-                let nonce = randomNonceString()
-                currentNonce = nonce
-                req.requestedScopes = [.email]
-                req.nonce = sha256(nonce)
-            } onCompletion: { result in
-                switch result {
-                case .success(let auth):
-                    guard let cred = auth.credential as? ASAuthorizationAppleIDCredential,
-                          let nonce = currentNonce,
-                          let tokenData = cred.identityToken,
-                          let idToken = String(data: tokenData, encoding: .utf8) else {
-                        errorMessage = "Apple credentials failed."; return
-                    }
-                    let credential = OAuthProvider.credential(withProviderID: "apple.com", idToken: idToken, rawNonce: nonce)
-                    Auth.auth().signIn(with: credential) { res, err in
-                        if let err = err { errorMessage = "Firebase Auth failed: \(err.localizedDescription)"; return }
-                        userUID = res?.user.uid ?? ""
-                    }
-                case .failure(let err):
-                    errorMessage = "Sign in failed: \(err.localizedDescription)"
-                }
-            }
-            .signInWithAppleButtonStyle(.black)
-            .frame(height: 52).clipShape(RoundedRectangle(cornerRadius: 12))
-            .padding(.horizontal)
+    // MARK: - Nonce helpers
 
-            if let e = errorMessage {
-                Text(e).font(.footnote).foregroundStyle(.red).padding(.horizontal)
-            }
-            Spacer()
-        }
-        .background(
-            LinearGradient(colors: [.blue.opacity(0.08), .clear], startPoint: .top, endPoint: .bottom)
-                .ignoresSafeArea()
-        )
-    }
-}
+    private func randomNonceString(length: Int = 32) -> String {
+        let charset = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
+        var result = ""
+        var remaining = length
 
-// MARK: - Main Shell (Tabs + Bell)
-struct MainShell: View {
-    let userUID: String
-    @State private var showNotifications = false
-
-    var body: some View {
-        NavigationStack {
-            TabView {
-                HomeView(userUID: userUID)
-                    .tabItem { Label("Home", systemImage: "house.fill") }
-
-                // NEW: Functions tab replaces the former Sensor tab
-                FunctionsView(userUID: userUID)
-                    .tabItem { Label("Functions", systemImage: "square.grid.2x2.fill") }
-
-                DevicesView(userUID: userUID)
-                    .tabItem { Label("Devices", systemImage: "iphone.gen3") }
-
-                MeView(userUID: userUID)
-                    .tabItem { Label("Me", systemImage: "person.crop.circle") }
-
-                SettingsView(userUID: userUID)
-                    .tabItem { Label("Settings", systemImage: "gearshape") }
-
-                AboutView()
-                    .tabItem { Label("About", systemImage: "info.circle") }
-            }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button { showNotifications = true } label: {
-                        Image(systemName: "bell.fill").imageScale(.large)
-                    }
-                    .accessibilityLabel("Notifications")
-                }
-            }
-            .sheet(isPresented: $showNotifications) {
-                NotificationsView(userUID: userUID)
+        while remaining > 0 {
+            var random: UInt8 = 0
+            SecRandomCopyBytes(kSecRandomDefault, 1, &random)
+            if random < charset.count {
+                result.append(charset[Int(random)])
+                remaining -= 1
             }
         }
+        return result
     }
-}
 
-// MARK: - Home
-struct HomeView: View {
-    let userUID: String
-    @State private var mailDetected = false
-    @State private var errorMessage: String?
-    private let db = Firestore.firestore()
+    private func sha256(_ input: String) -> String {
+        SHA256.hash(data: Data(input.utf8))
+            .map { String(format: "%02x", $0) }
+            .joined()
+    }
+
+    // MARK: - Firestore writes (STRICT + SAFE)
+
+    /// Creates/updates user info.
+    /// Only `signedInAt` ever changes.
+    private func writeUserInfo(uid: String, email: String?) {
+        var data: [String: Any] = [
+            "signedInAt": FieldValue.serverTimestamp()
+        ]
+
+        // Email written once (Apple only returns it first sign-in)
+        if let email, !email.isEmpty {
+            data["email"] = email
+        }
+
+        Firestore.firestore()
+            .collection("users")
+            .document(uid)
+            .collection("info")
+            .document("main")
+            .setData(data, merge: true)
+    }
+
 
     var body: some View {
-        ScrollView {
+        ZStack {
+            // Background
+            LinearGradient(
+                colors: [
+                    Color(.systemBackground),
+                    Color(.secondarySystemBackground)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+
             VStack(spacing: 16) {
-                VStack(spacing: 8) {
-                    Image(systemName: mailDetected ? "envelope.badge.fill" : "envelope.open")
-                        .font(.system(size: 44, weight: .semibold))
-                    Text(mailDetected ? "Mail Detected!" : "Waiting for Mail…")
-                        .font(.title3.bold())
-                        .foregroundStyle(mailDetected ? .green : .secondary)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 28)
-                .background(.ultraThinMaterial)
-                .clipShape(RoundedRectangle(cornerRadius: 20))
-                .padding(.horizontal)
-
-                VStack(spacing: 12) {
-                    Button {
-                        simulateMailDetection()
-                    } label: {
-                        Label("Simulate Mail Detection", systemImage: "shippingbox.fill")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-                    .padding(.horizontal)
-
-                    Button(role: .destructive) {
-                        resetMailFlag()
-                    } label: {
-                        Label("Reset Mail Status", systemImage: "arrow.counterclockwise")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-                    .padding(.horizontal)
-                }
-
-                if let err = errorMessage {
-                    Text(err).foregroundStyle(.red).font(.footnote)
-                }
-                Spacer(minLength: 24)
-            }
-            .padding(.top, 16)
-        }
-        .navigationTitle("Home")
-        .onAppear { listenForMail() }
-    }
-
-    func simulateMailDetection() {
-        guard let uid = Auth.auth().currentUser?.uid else { return }
-        let url = URL(string: "https://us-central1-notifymailbox-d9657.cloudfunctions.net/sendMailNotification")!
-        var req = URLRequest(url: url)
-        req.httpMethod = "POST"
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.httpBody = try? JSONSerialization.data(withJSONObject: ["userId": uid])
-        URLSession.shared.dataTask(with: req).resume()
-    }
-
-    func resetMailFlag() {
-        db.collection("users").document(userUID).updateData(["mailDetected": false])
-        mailDetected = false
-    }
-
-    func listenForMail() {
-        db.collection("users").document(userUID).addSnapshotListener { snap, _ in
-            guard let data = snap?.data(), let detected = data["mailDetected"] as? Bool else { return }
-            mailDetected = detected
-        }
-    }
-}
-
-// MARK: - NEW: Functions (formerly Sensor)
-struct FunctionsView: View {
-    let userUID: String
-
-    struct FunctionItem: Identifiable {
-        enum Status { case available, planned, accessory }
-        let id = UUID()
-        let title: String
-        let subtitle: String
-        let systemImage: String
-        let status: Status
-        let info: String
-    }
-
-    private var items: [FunctionItem] {
-        [
-            .init(title: "Mailbox Notifier", subtitle: "Detect mail + push alerts", systemImage: "envelope.badge", status: .available, info: "Uses camera or motion heuristics near the mailbox to detect openings. Sends push to all signed-in devices via FCM."),
-            .init(title: "Camera", subtitle: "Live view / snapshots", systemImage: "camera.viewfinder", status: .available, info: "Turns your old phone into a simple IP-style viewer within the app (no background server). Supports periodic snapshots to Firestore Storage (future)."),
-            .init(title: "Motion Sensor", subtitle: "Device motion / vibration", systemImage: "waveform.path.ecg", status: .available, info: "Uses CoreMotion accelerometer/gyroscope to detect movement, bumps, or door openings. Triggers on-threshold push notifications."),
-            .init(title: "Sound Detector", subtitle: "Noise/knock detection", systemImage: "ear.badge.waveform", status: .available, info: "Microphone-based knock/clang/bark threshold detection. All processing on-device; only events are uploaded."),
-            .init(title: "Time‑lapse", subtitle: "Interval photos", systemImage: "timer", status: .planned, info: "Capture frames on an interval and build a time‑lapse locally. Option to sync to cloud later."),
-            .init(title: "QR / Barcode", subtitle: "Scan & log", systemImage: "qrcode.viewfinder", status: .available, info: "Use the camera to scan codes and log events (arrivals, packages)."),
-            .init(title: "Dashcam", subtitle: "Auto‑record while moving", systemImage: "car.rear.fill", status: .planned, info: "Records when motion exceeds threshold and device is powered. Overwrites oldest clips (ring buffer)."),
-            .init(title: "Baby Monitor", subtitle: "Low‑latency audio", systemImage: "figure.2.and.child.holdinghands", status: .planned, info: "One‑tap audio streaming to another device in the app. Local network preferred."),
-            .init(title: "Pet Watcher", subtitle: "Motion + barks", systemImage: "pawprint.fill", status: .planned, info: "Detects motion in a zone and higher SPL spikes suggestive of barks; sends a clip and alert."),
-            .init(title: "Doorbell / Knock", subtitle: "Detect door knocks", systemImage: "bell.circle.fill", status: .available, info: "Use sound + motion combo near door to detect knocks/rings and push an alert with timestamp."),
-            .init(title: "Presence", subtitle: "Near‑phone presence", systemImage: "dot.radiowaves.up.forward", status: .planned, info: "Estimates presence using on‑device signals. Background Bluetooth/Wi‑Fi scanning is limited on iOS; will work while app is active."),
-            .init(title: "Light Level", subtitle: "Via camera analysis", systemImage: "lightbulb.fill", status: .available, info: "Approximates ambient light using the camera feed (iOS does not expose the ambient light sensor directly to apps).")
-        ]
-    }
-
-    @State private var query = ""
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                header
-                searchBar
-                grid
-            }
-            .padding(.horizontal)
-            .padding(.top, 16)
-        }
-        .navigationTitle("Functions")
-    }
-
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Put Your Old Phone to Work")
-                .font(.title2.bold())
-            Text("Choose a function below to set up this device as a sensor, camera, or notifier. More coming soon.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-        }
-    }
-
-    private var searchBar: some View {
-        HStack {
-            Image(systemName: "magnifyingglass")
-            TextField("Search functions", text: $query)
-                .textInputAutocapitalization(.never)
-                .disableAutocorrection(true)
-        }
-        .padding(10)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-    }
-
-    private var grid: some View {
-        let filtered = items.filter { query.isEmpty ? true : ($0.title + $0.subtitle + $0.info).localizedCaseInsensitiveContains(query) }
-        return LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-            ForEach(filtered) { item in
-                NavigationLink {
-                    FunctionDetailView(userUID: userUID, item: item)
-                } label: {
-                    FunctionCard(item: item)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-    }
-}
-
-struct FunctionCard: View {
-    let item: FunctionsView.FunctionItem
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Image(systemName: item.systemImage)
-                    .font(.system(size: 28, weight: .semibold))
                 Spacer()
-                statusBadge
-            }
-            Text(item.title)
-                .font(.headline)
-            Text(item.subtitle)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .padding(14)
-        .frame(maxWidth: .infinity, minHeight: 110, alignment: .topLeading)
-        .background(.thinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-    }
 
-    @ViewBuilder private var statusBadge: some View {
-        switch item.status {
-        case .available:
-            Label("Available", systemImage: "checkmark.circle.fill")
-                .font(.caption2).foregroundStyle(.green)
-        case .planned:
-            Label("Planned", systemImage: "clock.badge.checkmark")
-                .font(.caption2).foregroundStyle(.orange)
-        case .accessory:
-            Label("Accessory", systemImage: "bolt.shield.fill")
-                .font(.caption2).foregroundStyle(.blue)
-        }
-    }
-}
+                // Brand / Header
+                VStack(spacing: 10) {
+                    Image(systemName: "bolt.badge.clock")
+                        .font(.system(size: 44, weight: .semibold))
+                        .foregroundStyle(.primary)
 
+                    Text("WatchTool")
+                        .font(.system(size: 34, weight: .bold, design: .rounded))
+                        .foregroundStyle(.primary)
 
-// MARK: - Devices
-struct Device: Identifiable {
-    let id: String
-    let model: String
-    let name: String
-    let bundleID: String
-    let systemVersion: String
-    let isActive: Bool
-    let updatedAt: Date?
-    let token: String?
-
-    init(id: String, data: [String: Any]) {
-        self.id = id
-        self.model = data["model"] as? String ?? "Unknown"
-        self.name = data["name"] as? String ?? ""
-        self.bundleID = data["bundleID"] as? String ?? ""
-        self.systemVersion = data["systemVersion"] as? String ?? ""
-        self.isActive = data["isActive"] as? Bool ?? false
-        self.updatedAt = (data["updatedAt"] as? Timestamp)?.dateValue()
-        self.token = data["token"] as? String
-    }
-}
-
-struct DevicesView: View {
-    let userUID: String
-    @State private var devices: [Device] = []
-    private let db = Firestore.firestore()
-
-    var body: some View {
-        List(devices) { device in
-            DeviceRow(device: device)
-        }
-        .listStyle(.insetGrouped)
-        .navigationTitle("Devices")
-        .onAppear { subscribe() }
-    }
-
-    func subscribe() {
-        db.collection("users").document(userUID).collection("devices")
-            .order(by: "updatedAt", descending: true)
-            .addSnapshotListener { snapshot, _ in
-                guard let docs = snapshot?.documents else { return }
-                devices = docs.map { Device(id: $0.documentID, data: $0.data()) }
-            }
-    }
-}
-
-struct DeviceRow: View {
-    let device: Device
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: "iphone.gen3")
-                .font(.system(size: 28))
-                .foregroundStyle(device.isActive ? .green : .secondary)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(device.name.isEmpty ? device.model : device.name)
-                    .font(.headline)
-                Text(device.id).font(.caption2).foregroundStyle(.secondary)
-                HStack(spacing: 6) {
-                    if !device.systemVersion.isEmpty {
-                        Text("iOS \(device.systemVersion)").font(.caption).foregroundStyle(.secondary)
-                    }
-                    if !device.bundleID.isEmpty {
-                        Text("· \(device.bundleID)").font(.caption).foregroundStyle(.secondary)
-                    }
-                }
-                if let updated = device.updatedAt {
-                    Text(updated, style: .relative)
-                        .font(.caption2).foregroundStyle(.secondary)
-                }
-            }
-            Spacer()
-            Image(systemName: device.isActive ? "checkmark.circle.fill" : "xmark.circle")
-                .foregroundStyle(device.isActive ? .green : .secondary)
-        }
-        .padding(.vertical, 6)
-    }
-}
-
-// MARK: - Me
-struct MeView: View {
-    let userUID: String
-    var body: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "person.crop.circle.fill")
-                .font(.system(size: 80))
-                .foregroundStyle(.blue)
-                .padding(.top, 24)
-
-            if let user = Auth.auth().currentUser {
-                Text(user.email ?? "Signed in with Apple").font(.headline)
-                Text("User ID: \(user.uid)").font(.caption).foregroundStyle(.secondary)
-            }
-
-            Button(role: .destructive) {
-                try? Auth.auth().signOut()
-                UserDefaults.standard.removeObject(forKey: "userUID")
-            } label: {
-                Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
-            }
-            .buttonStyle(.bordered)
-
-            Spacer()
-        }
-        .padding()
-        .navigationTitle("Me")
-    }
-}
-
-// MARK: - Settings
-struct SettingsView: View {
-    let userUID: String
-    @State private var playSound = true
-    @State private var showBanner = true
-    @State private var vibrate = true
-
-    var body: some View {
-        Form {
-            Section("Notifications") {
-                Toggle("Show Banner", isOn: $showBanner)
-                Toggle("Play Sound", isOn: $playSound)
-                Toggle("Vibrate", isOn: $vibrate)
-            }
-
-            Section("Devices") {
-                NavigationLink {
-                    DevicesView(userUID: userUID)
-                } label: {
-                    Label("Manage Devices", systemImage: "iphone.and.arrow.forward")
-                }
-            }
-
-            Section("Advanced") {
-                NavigationLink("Notification Permissions") {
-                    Text("Open iOS Settings → Notifications to adjust system-level options.")
-                        .padding()
-                }
-            }
-        }
-        .navigationTitle("Settings")
-    }
-}
-
-// MARK: - About
-struct AboutView: View {
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("About Mailbox Notifier IRL").font(.title.bold())
-                Text("""
-Our mission is to make real-world mail detection simple and reliable using the devices you already own. Every signed-in device can detect mail and receive notifications—no hubs, no wiring.
-""")
-                VStack(alignment: .leading, spacing: 8) {
-                    Label("Private by design", systemImage: "lock.fill")
-                    Label("Fast push notifications", systemImage: "bolt.fill")
-                    Label("Works on multiple devices", systemImage: "iphone.gen3")
-                }
-                .font(.subheadline)
-                Spacer(minLength: 24)
-            }
-            .padding()
-        }
-        .navigationTitle("About")
-    }
-}
-
-// MARK: - Notifications (sheet opened by bell)
-struct NotifItem: Identifiable {
-    let id: String
-    let title: String
-    let body: String
-    let createdAt: Date
-    init(id: String, data: [String: Any]) {
-        self.id = id
-        self.title = data["title"] as? String ?? "Notification"
-        self.body = data["body"] as? String ?? ""
-        self.createdAt = (data["createdAt"] as? Timestamp)?.dateValue() ?? Date()
-    }
-}
-
-struct NotificationsView: View {
-    let userUID: String
-    @Environment(\.dismiss) private var dismiss
-    @State private var items: [NotifItem] = []
-    private let db = Firestore.firestore()
-
-    var body: some View {
-        NavigationStack {
-            List(items) { n in
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(n.title).font(.headline)
-                    Text(n.body).font(.subheadline).foregroundStyle(.secondary)
-                    Text(n.createdAt, style: .relative).font(.caption2).foregroundStyle(.secondary)
-                }.padding(.vertical, 4)
-            }
-            .listStyle(.insetGrouped)
-            .navigationTitle("Notifications")
-            .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Done") { dismiss() } } }
-            .onAppear { subscribe() }
-        }
-    }
-
-    func subscribe() {
-        db.collection("users").document(userUID).collection("notifications")
-            .order(by: "createdAt", descending: true)
-            .limit(to: 50)
-            .addSnapshotListener { snap, _ in
-                guard let docs = snap?.documents else { return }
-                items = docs.map { NotifItem(id: $0.documentID, data: $0.data()) }
-            }
-    }
-}
-
-// MARK: - Helpers (nonce/hash)
-func randomNonceString(length: Int = 32) -> String {
-    let charset = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
-    var result = ""; var remaining = length
-    while remaining > 0 {
-        let randoms: [UInt8] = (0..<16).map { _ in
-            var r: UInt8 = 0; _ = SecRandomCopyBytes(kSecRandomDefault, 1, &r); return r
-        }
-        for r in randoms where remaining > 0 {
-            if r < charset.count { result.append(charset[Int(r)]); remaining -= 1 }
-        }
-    }
-    return result
-}
-
-func sha256(_ input: String) -> String {
-    let inputData = Data(input.utf8)
-    let hashed = SHA256.hash(data: inputData)
-    return hashed.map { String(format: "%02x", $0) }.joined()
-}
-
- 
- 
-
-struct FunctionDetailView: View {
-    let userUID: String
-    let item: FunctionsView.FunctionItem
-    @State private var isEnabling = false
-    @State private var enabled = false
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                HStack(spacing: 12) {
-                    Image(systemName: item.systemImage).font(.system(size: 34, weight: .bold))
-                    VStack(alignment: .leading) {
-                        Text(item.title).font(.title2.bold())
-                        Text(item.subtitle).font(.subheadline).foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                }
-
-                Text(item.info)
-                    .font(.body)
-
-                Divider()
-
-                // Keep the generic enable flow (unchanged)
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Setup Preview").font(.headline)
-                    Text("Tapping Enable will create a config document for \(item.title) under your user profile. You can wire the actual sensor/stream implementation later.")
-                        .font(.caption)
+                    Text("Sign in to sync tasks across your devices.")
+                        .font(.system(size: 15, weight: .medium))
                         .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 24)
                 }
+                .padding(.bottom, 12)
 
-                Button {
-                    enableFunction()
-                } label: {
-                    if isEnabling {
-                        ProgressView().frame(maxWidth: .infinity)
-                    } else {
-                        Label(enabled ? "Enabled" : "Enable \(item.title)", systemImage: enabled ? "checkmark.circle" : "play.circle")
-                            .frame(maxWidth: .infinity)
-                    }
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(isEnabling)
+                // Sign-in Card
+                VStack(spacing: 14) {
+                    SignInWithAppleButton { req in
+                        let nonce = randomNonceString()
+                        currentNonce = nonce
+                        req.requestedScopes = [.email]
+                        req.nonce = sha256(nonce)
+                    } onCompletion: { result in
+                        switch result {
+                        case .success(let auth):
+                            guard
+                                let cred = auth.credential as? ASAuthorizationAppleIDCredential,
+                                let nonce = currentNonce,
+                                let tokenData = cred.identityToken,
+                                let idToken = String(data: tokenData, encoding: .utf8)
+                            else {
+                                errorMessage = "Apple sign-in failed."
+                                return
+                            }
 
-                // NEW: Mailbox-specific UI (non-invasive; appears only for this item)
-                if item.title == "Mailbox Notifier" {
-                    Divider().padding(.top, 8)
-                    MailboxNotifierSetupView()
-                }
-            }
-            .padding()
-        }
-        .navigationTitle(item.title)
-        .navigationBarTitleDisplayMode(.inline)
-    }
+                            let credential = OAuthProvider.credential(
+                                withProviderID: "apple.com",
+                                idToken: idToken,
+                                rawNonce: nonce
+                            )
 
-    private func enableFunction() {
-        guard !isEnabling, let uid = Auth.auth().currentUser?.uid else { return }
-        isEnabling = true
-        let db = Firestore.firestore()
-        let doc = db.collection("users").document(uid).collection("functions").document(item.title)
-        let payload: [String: Any] = [
-            "title": item.title,
-            "subtitle": item.subtitle,
-            "status": "enabled",
-            "updatedAt": FieldValue.serverTimestamp()
-        ]
-        doc.setData(payload, merge: true) { _ in
-            isEnabling = false
-            enabled = true
-        }
-    }
-}
+                            Auth.auth().signIn(with: credential) { res, err in
+                                if let err {
+                                    errorMessage = err.localizedDescription
+                                    return
+                                }
 
-// MARK: - Mailbox Notifier: manual settings + 30s placement timer
-struct MailboxNotifierSetupView: View {
-    // User confirms they’ve manually done these in iOS Settings / physically
-    @State private var allowNotifications = false
-    @State private var disableAutoLock = false
-    @State private var keepPluggedIn = false
-    @State private var placePhoneFaceUp = false
+                                guard let user = res?.user else { return }
 
-    // Timer & state
-    @State private var hasStartedTimer = false
-    @State private var countdown = 30
-    @State private var isArmed = false
+                                // Persist auth state
+                                userUID = user.uid
+                                if let pending = UserDefaults.standard.string(forKey: "pendingFCMToken"),
+                                   !pending.isEmpty {
+                                    upsertDeviceFCMToken(uid: user.uid, deviceID: deviceID, token: pending)
+                                    UserDefaults.standard.removeObject(forKey: "pendingFCMToken")
+                                }
 
-    // One-second ticker for countdown
-    private let ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+                                upsertDeviceBaseline(uid: user.uid, deviceID: deviceID)
+                                syncFCMTokenAfterLogin(uid: user.uid, deviceID: deviceID)
+                            }
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Before You Begin")
-                .font(.headline)
-
-            VStack(alignment: .leading, spacing: 10) {
-                ChecklistRow(isOn: $allowNotifications,
-                             title: "Allow Notifications",
-                             subtitle: "Settings → Notifications → Allow for this app.")
-                ChecklistRow(isOn: $disableAutoLock,
-                             title: "Disable Auto-Lock (Temporarily)",
-                             subtitle: "Settings → Display & Brightness → Auto-Lock → set to a longer duration while testing.")
-                ChecklistRow(isOn: $keepPluggedIn,
-                             title: "Keep Device Plugged In",
-                             subtitle: "Recommended for longer sessions.")
-                ChecklistRow(isOn: $placePhoneFaceUp,
-                             title: "Place Phone Face-Up in Mailbox",
-                             subtitle: "Stable position, not touching moving parts.")
-            }
-            .padding(12)
-            .background(.ultraThinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-
-            // Start timer
-            if !hasStartedTimer && !isArmed {
-                Button {
-                    hasStartedTimer = true
-                    countdown = 30
-                } label: {
-                    Label("I'm ready — start 30s placement timer", systemImage: "timer")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(!allRequiredChecks)
-                .animation(.easeInOut, value: allRequiredChecks)
-            }
-
-            // Countdown view
-            if hasStartedTimer && !isArmed {
-                VStack(spacing: 8) {
-                    Text("Place the phone in the mailbox now.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                    Text("\(countdown)")
-                        .font(.system(size: 48, weight: .bold, design: .rounded))
-                        .monospacedDigit()
-                    Text("Listening will begin after the timer finishes.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(.thinMaterial)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
-                .onReceive(ticker) { _ in
-                    guard hasStartedTimer, countdown > 0 else { return }
-                    countdown -= 1
-                    if countdown == 0 {
-                        // No backend call here—just flip UI state to “armed”
-                        isArmed = true
-                        hasStartedTimer = false
-                    }
-                }
-            }
-
-            // Armed state
-            if isArmed {
-                VStack(alignment: .leading, spacing: 8) {
-                    Label("Mailbox Notifier armed", systemImage: "checkmark.seal.fill")
-                        .font(.headline)
-                        .foregroundStyle(.green)
-                    Text("You can leave this phone in the mailbox. (No detection logic here yet—just UI state.)")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                    HStack {
-                        Button(role: .destructive) {
-                            isArmed = false
-                        } label: {
-                            Label("Stop Listening", systemImage: "stop.circle")
+                        case .failure(let err):
+                            errorMessage = err.localizedDescription
                         }
-                        .buttonStyle(.bordered)
+                    }
+                    .signInWithAppleButtonStyle(.black)
+                    .frame(height: 52)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                }
+                .padding(18)
+                .background(
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .fill(Color(.systemBackground))
+                        .shadow(color: Color.black.opacity(0.08), radius: 18, x: 0, y: 10)
+                )
+                .padding(.horizontal, 18)
+
+                // Error message (clean, card-like)
+                if let errorMessage {
+                    HStack(alignment: .top, spacing: 10) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.red)
+                            .font(.system(size: 14, weight: .semibold))
+
+                        Text(errorMessage)
+                            .foregroundStyle(.red)
+                            .font(.footnote)
+                            .fixedSize(horizontal: false, vertical: true)
 
                         Spacer()
                     }
+                    .padding(12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(Color.red.opacity(0.08))
+                    )
+                    .padding(.horizontal, 18)
+                    .transition(.opacity)
                 }
-                .padding()
-                .background(.thinMaterial)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
+
+                Spacer()
+
+                // Footer
+                Text("Apple Sign-In is used only to create your account and sync devices.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 28)
+                    .padding(.bottom, 14)
             }
+        }
+        .onAppear {
+            // no logic changes
         }
     }
 
-    private var allRequiredChecks: Bool {
-        // Keep this minimal & manual; add/remove requirements as you like
-        allowNotifications && disableAutoLock && keepPluggedIn && placePhoneFaceUp
-    }
+    
 }
 
-// Small reusable checklist row
-private struct ChecklistRow: View {
-    @Binding var isOn: Bool
-    let title: String
-    let subtitle: String
+// MARK: - Optional Loading Gate (simple countdown)
+private struct LottieLoadingGate: View {
+    let seconds: Double
+    let onFinish: () -> Void
+
+    init(seconds: Double = 3.0, onFinish: @escaping () -> Void) {
+        self.seconds = max(0, seconds)
+        self.onFinish = onFinish
+    }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            Button {
-                isOn.toggle()
-            } label: {
-                Image(systemName: isOn ? "checkmark.circle.fill" : "circle")
-                    .font(.title3)
-                    .foregroundStyle(isOn ? .green : .secondary)
-            }
-            .buttonStyle(.plain)
+        ZStack {
+            // Keep your splash background color here
+            Color(red: 61/255, green: 99/255, blue: 68/255).ignoresSafeArea()
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.subheadline.weight(.semibold))
-                Text(subtitle).font(.caption).foregroundStyle(.secondary)
-            }
-            Spacer()
+            LottieLoaderView(name: "loadingLogo 2")
+                .frame(width: 240, height: 240)
         }
-        .contentShape(Rectangle())
-        .onTapGesture { isOn.toggle() }
+        .onAppear {
+            guard seconds > 0 else { onFinish(); return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + seconds) {
+                onFinish()
+            }
+        }
     }
 }
+private struct LoadingGate: View {
+    let seconds: Int
+    let onFinish: () -> Void
+
+    @State private var remaining: Int
+
+    init(seconds: Int = 2, onFinish: @escaping () -> Void) {
+        self.seconds = max(0, seconds)
+        self.onFinish = onFinish
+        _remaining = State(initialValue: max(0, seconds))
+    }
+
+    var body: some View {
+        VStack(spacing: 14) {
+            Spacer()
+            ProgressView()
+            Text(remaining > 0 ? "Loading… \(remaining)" : "Loading…")
+                .foregroundStyle(.secondary)
+                .font(.footnote)
+            Spacer()
+        }
+        .onAppear {
+            guard seconds > 0 else {
+                onFinish()
+                return
+            }
+            tick()
+        }
+    }
+
+    private func tick() {
+        if remaining <= 0 {
+            onFinish()
+            return
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+            remaining -= 1
+            tick()
+        }
+    }
+}
+
+// MARK: - Root View
+
+struct ContentView: View {
+
+    @AppStorage("userUID") private var userUID: String = ""
+    @State private var currentNonce: String?
+    @State private var errorMessage: String?
+    
+    @StateObject private var taskLog = TaskLog()
+    
+    @State private var showLoadingGate: Bool = true
+    
+    // NEW: drive UI off Firebase auth changes
+    @State private var authUID: String = ""
+    @State private var didBootstrap: Bool = false
+    @State private var authListenerHandle: AuthStateDidChangeListenerHandle?
+    
+    // IMPORTANT: must match DevicesView stable device id behavior
+    let deviceID = DeviceIdentity.id()
+    
+    var body: some View {
+        Group {
+            if authUID.isEmpty {
+                AuthGate(currentNonce: $currentNonce, errorMessage: $errorMessage)
+            }
+            
+            
+            
+            else if showLoadingGate {
+                LottieLoadingGate(seconds: 3.0) {
+                    showLoadingGate = false
+                }
+                .onAppear {
+                    bootstrapAfterAuth()
+                }
+                
+            } else {
+                AppNavigationContainer {
+                    TabView {
+                        HomeTab(userUID: userUID, deviceID: deviceID)
+                            .tabItem { Label("Home", systemImage: "house.fill") }
+                        
+                        TasksTab(deviceID: deviceID)
+                            .tabItem { Label("Tasks", systemImage: AppSymbols.best(["square.grid.2x2.fill","square.grid.2x2"])) }
+                        
+                        DevicesView(userUID: userUID)
+                            .tabItem { Label("Devices", systemImage: AppSymbols.best(["iphone.gen3","iphone"])) }
+                        
+                        MeView(userUID: userUID)
+                            .tabItem { Label("Me", systemImage: "person.crop.circle") }
+                        
+                        MoreTab(uid: userUID, deviceID: deviceID)
+                            .tabItem { Label("More", systemImage: "ellipsis.circle") }
+                    }
+                }
+                .environmentObject(taskLog)
+                .alert("Error", isPresented: Binding(
+                    get: { errorMessage != nil && !(errorMessage ?? "").isEmpty },
+                    set: { newValue in if !newValue { errorMessage = nil } }
+                )) {
+                    Button("OK", role: .cancel) { errorMessage = nil }
+                } message: {
+                    Text(errorMessage ?? "")
+                }
+            }
+        }
+        .onAppear {
+            attachAuthListenerIfNeeded()
+        }
+        .onDisappear {
+            detachAuthListenerIfNeeded()
+        }
+    }
+    
+    // MARK: - Auth Listener (makes UI reactive)
+    
+    private func attachAuthListenerIfNeeded() {
+        if authListenerHandle != nil { return }
+        
+        authUID = Auth.auth().currentUser?.uid ?? ""
+        
+        authListenerHandle = Auth.auth().addStateDidChangeListener { _, user in
+            let newUID = user?.uid ?? ""
+            
+            // Drive UI updates
+            authUID = newUID
+            
+            if newUID.isEmpty {
+                // Signed out / token invalid
+                userUID = ""
+                didBootstrap = false
+                showLoadingGate = true
+            } else {
+                // Keep AppStorage consistent
+                if userUID != newUID {
+                    userUID = newUID
+                }
+                // Ensure we show loading gate once after auth becomes valid
+                showLoadingGate = true
+                didBootstrap = false
+            }
+        }
+    }
+    
+    private func detachAuthListenerIfNeeded() {
+        if let h = authListenerHandle {
+            Auth.auth().removeStateDidChangeListener(h)
+            authListenerHandle = nil
+        }
+    }
+    
+    // MARK: - Bootstrap after auth (no realtime; one-time actions)
+    
+    
+    
+    private func bootstrapAfterAuth() {
+        // Prevent repeated bootstrap runs while still allowing re-run after sign out/in
+        if didBootstrap { return }
+        didBootstrap = true
+        
+        // Hard assert AppStorage matches Auth
+        let auth = Auth.auth().currentUser?.uid ?? ""
+        guard !auth.isEmpty else {
+            userUID = ""
+            authUID = ""
+            didBootstrap = false
+            return
+        }
+        if userUID != auth { userUID = auth }
+        
+        
+        
+        // 2) End orphan tasks for THIS device (app-load cleanup)
+        forceEndOpenTasksForDevice(deviceID: deviceID, endedBy: "App Load") { err in
+            if let err = err {
+             //   errorMessage = "Task cleanup failed: \(err.localizedDescription)"
+            }
+        }
+        
+        // 3) Initial fetch (manual)
+        taskLog.refresh(userUID: userUID) { err in
+            if let err = err {
+               // errorMessage = "Loading previous tasks failed: \(err.localizedDescription)"
+            }
+        }
+    }
+}
+
+func upsertDeviceBaseline(uid: String, deviceID: String) {
+    
+ //   Logger.insertLog("supsertDeviceBS", "started", Date())
+    Firestore.firestore()
+        .collection("users")
+        .document(uid)
+        .collection("devices")
+        .document(deviceID)
+        .setData([
+            "name": UIDevice.current.name,
+            "model": UIDevice.current.model,
+            "systemVersion": UIDevice.current.systemVersion,
+            "updatedAt": FieldValue.serverTimestamp(),
+            "updatedBy": "upsertDeviceBaseline"
+            // keep createdAt stable-ish by only setting if missing is hard without a transaction;
+            // if you truly care, use Option B below.
+    
+        ], merge: true)
+    
+  //  Logger.insertLog("supsertDeviceBS", "sexit", Date())
+
+}
+
+
